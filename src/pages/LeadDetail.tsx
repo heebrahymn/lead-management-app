@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AppHeader } from "@/components/AppHeader";
+
 import { StatusPicker } from "@/components/StatusPicker";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL } from "@/lib/leads";
@@ -143,35 +143,28 @@ export default function LeadDetail() {
 
   if (authLoading || !session || loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader />
-        <div className="flex h-[60vh] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!lead) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader />
-        <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-          <h2 className="text-lg font-semibold">Lead not found</h2>
-          <Link to="/" className="mt-3 inline-block text-sm text-primary hover:underline">
-            Back to leads
-          </Link>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <h2 className="text-lg font-semibold">Lead not found</h2>
+        <Link to="/leads" className="mt-3 inline-block text-sm text-primary hover:underline">
+          Back to leads
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
+    <div>
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <Link
-          to="/"
+          to="/leads"
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
