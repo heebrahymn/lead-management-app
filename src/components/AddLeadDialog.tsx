@@ -12,14 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
-import { z } from "zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LeadSource, SOURCES } from "@/lib/leads";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional(),
-  source: z.string().trim().max(80).optional(),
+  source: z.string().trim().max(80).optional().nullable(),
 });
 
 interface Props {
@@ -30,7 +30,9 @@ interface Props {
 export function AddLeadDialog({ onCreated, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", source: "" });
+  const [form, setForm] = useState<{ name: string; email: string; phone: string; source: LeadSource | "" }>({
+    name: "", email: "", phone: "", source: ""
+  });
 
   const reset = () => setForm({ name: "", email: "", phone: "", source: "" });
 
@@ -110,12 +112,21 @@ export function AddLeadDialog({ onCreated, trigger }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="source">Source</Label>
-            <Input
-              id="source"
+            <Select
               value={form.source}
-              onChange={(e) => setForm({ ...form, source: e.target.value })}
-              placeholder="Referral, Website, LinkedIn…"
-            />
+              onValueChange={(v) => setForm({ ...form, source: v as LeadSource })}
+            >
+              <SelectTrigger id="source">
+                <SelectValue placeholder="Select source" />
+              </SelectTrigger>
+              <SelectContent>
+                {SOURCES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

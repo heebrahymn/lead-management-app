@@ -5,9 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 
 import { StatusPicker } from "@/components/StatusPicker";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL } from "@/lib/leads";
+import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL, LeadSource, SOURCES } from "@/lib/leads";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -268,11 +269,21 @@ export default function LeadDetail() {
                   />
                 </FieldRow>
                 <FieldRow label="Source">
-                  <EditableField
+                  <Select
                     value={lead.source ?? ""}
-                    placeholder="—"
-                    onSave={(v) => updateField("source", v)}
-                  />
+                    onValueChange={(v) => updateField("source", v)}
+                  >
+                    <SelectTrigger className="h-8 w-full border-transparent bg-transparent px-2 -ml-2 text-foreground shadow-none hover:border-border focus:border-border focus:ring-0">
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOURCES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FieldRow>
                 <FieldRow label="Created">
                   <span className="text-foreground">
