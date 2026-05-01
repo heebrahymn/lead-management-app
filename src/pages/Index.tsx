@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AppHeader } from "@/components/AppHeader";
+
 import { AddLeadDialog } from "@/components/AddLeadDialog";
 import { StatusPicker } from "@/components/StatusPicker";
 import { Lead, LeadStatus, STATUSES, STATUS_LABEL } from "@/lib/leads";
@@ -153,15 +153,14 @@ export default function Index() {
 
   if (authLoading || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
+    <div>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
