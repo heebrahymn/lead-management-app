@@ -13,7 +13,7 @@ export interface Lead {
   name: string;
   email: string | null;
   phone: string | null;
-  source: LeadSource | null;
+  source: string | null;
   status: LeadStatus;
   tags: string[];
   created_at: string;
