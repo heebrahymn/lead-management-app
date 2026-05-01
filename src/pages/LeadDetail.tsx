@@ -138,7 +138,7 @@ export default function LeadDetail() {
     const { error } = await supabase.from("leads").delete().eq("id", lead.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Lead deleted");
-    navigate("/", { replace: true });
+    navigate("/leads", { replace: true });
   };
 
   if (authLoading || !session || loading) {
