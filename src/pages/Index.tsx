@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AppHeader } from "@/components/AppHeader";
+
 import { AddLeadDialog } from "@/components/AddLeadDialog";
 import { StatusPicker } from "@/components/StatusPicker";
 import { Lead, LeadStatus, STATUSES, STATUS_LABEL } from "@/lib/leads";
