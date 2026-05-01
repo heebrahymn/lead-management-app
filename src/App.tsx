@@ -4,7 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index.tsx";
+import Overview from "./pages/Overview.tsx";
+import Analytics from "./pages/Analytics.tsx";
+import Settings from "./pages/Settings.tsx";
 import Auth from "./pages/Auth.tsx";
 import LeadDetail from "./pages/LeadDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -19,9 +23,14 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/leads/:id" element={<LeadDetail />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Overview />} />
+              <Route path="/leads" element={<Index />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
