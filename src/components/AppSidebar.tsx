@@ -58,12 +58,13 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
+                const isEnd = (item as any).end as boolean | undefined;
                 const active =
-                  item.end ? pathname === item.url : pathname.startsWith(item.url);
+                  isEnd ? pathname === item.url : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <NavLink to={item.url} end={item.end} className="flex items-center gap-2">
+                      <NavLink to={item.url} end={isEnd} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </NavLink>
