@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import { AddLeadDialog } from "@/components/AddLeadDialog";
 import { StatusPicker } from "@/components/StatusPicker";
-import { Lead, LeadStatus, LeadSource, STATUSES, STATUS_LABEL, SOURCES, SOURCE_LABEL } from "@/lib/leads";
+import { Lead, LeadStatus, STATUSES, STATUS_LABEL } from "@/lib/leads";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,6 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeadStatus[]>([]);
-  const [sourceFilter, setSourceFilter] = useState<LeadSource[]>([]);
   const [sort, setSort] = useState<SortKey>("updated_desc");
 
   useEffect(() => {
@@ -92,7 +91,6 @@ export default function Index() {
     const q = search.trim().toLowerCase();
     let list = leads.filter((l) => {
       if (statusFilter.length && !statusFilter.includes(l.status)) return false;
-      if (sourceFilter.length && (!l.source || !sourceFilter.includes(l.source))) return false;
       if (!q) return true;
       return (
         l.name.toLowerCase().includes(q) ||
@@ -117,7 +115,7 @@ export default function Index() {
       }
     });
     return list;
-  }, [leads, search, statusFilter, sourceFilter, sort]);
+  }, [leads, search, statusFilter, sort]);
 
   const counts = useMemo(() => {
     const c: Record<LeadStatus, number> = {
@@ -241,48 +239,6 @@ export default function Index() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Source
-                  {sourceFilter.length > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
-                      {sourceFilter.length}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Filter by source</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {SOURCES.map((s) => (
-                  <DropdownMenuCheckboxItem
-                    key={s.value}
-                    checked={sourceFilter.includes(s.value)}
-                    onCheckedChange={(checked) => {
-                      setSourceFilter((prev) =>
-                        checked ? [...prev, s.value] : prev.filter((x) => x !== s.value)
-                      );
-                    }}
-                  >
-                    {s.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-                {sourceFilter.length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <button
-                      onClick={() => setSourceFilter([])}
-                      className="w-full px-2 py-1.5 text-left text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Clear filters
-                    </button>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
               <SelectTrigger className="w-[170px] gap-2">
                 <ArrowUpDown className="h-4 w-4" />
@@ -308,9 +264,8 @@ export default function Index() {
         ) : (
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
             <div className="hidden grid-cols-12 gap-4 border-b border-border bg-muted/40 px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground sm:grid">
-              <div className="col-span-3">Name</div>
-              <div className="col-span-3">Contact</div>
-              <div className="col-span-2">Source</div>
+              <div className="col-span-4">Name</div>
+              <div className="col-span-4">Contact</div>
               <div className="col-span-2">Status</div>
               <div className="col-span-2">Updated</div>
             </div>
@@ -321,10 +276,13 @@ export default function Index() {
                   onClick={() => navigate(`/leads/${lead.id}`)}
                   className="grid cursor-pointer grid-cols-1 gap-2 px-4 py-3.5 transition hover:bg-muted/40 sm:grid-cols-12 sm:items-center sm:gap-4"
                 >
-                  <div className="col-span-3">
+                  <div className="col-span-4">
                     <div className="font-medium text-foreground">{lead.name}</div>
+                    {lead.source && (
+                      <div className="mt-0.5 text-xs text-muted-foreground">via {lead.source}</div>
+                    )}
                   </div>
-                  <div className="col-span-3 space-y-0.5 text-sm">
+                  <div className="col-span-4 space-y-0.5 text-sm">
                     {lead.email && (
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Mail className="h-3.5 w-3.5" />
@@ -340,9 +298,6 @@ export default function Index() {
                     {!lead.email && !lead.phone && (
                       <span className="text-xs text-muted-foreground">No contact info</span>
                     )}
-                  </div>
-                  <div className="col-span-2 text-sm text-muted-foreground">
-                    {lead.source ? SOURCE_LABEL[lead.source] : "—"}
                   </div>
                   <div className="col-span-2">
                     <StatusPicker

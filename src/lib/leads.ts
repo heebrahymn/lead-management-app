@@ -6,8 +6,6 @@ export type LeadStatus =
   | "lost"
   | "closed";
 
-export type LeadSource = "call" | "whatsapp" | "email" | "walk-in" | "existing";
-
 export interface Lead {
   id: string;
   name: string;
@@ -69,20 +67,4 @@ export const STATUS_DOT: Record<LeadStatus, string> = {
   converted: "bg-status-converted-fg",
   lost: "bg-status-lost-fg",
   closed: "bg-status-closed-fg",
-};
-
-export const SOURCES: { value: LeadSource; label: string }[] = [
-  { value: "call", label: "Call" },
-  { value: "whatsapp", label: "Whatsapp" },
-  { value: "email", label: "Email" },
-  { value: "walk-in", label: "Walk-in" },
-  { value: "existing", label: "Existing" },
-];
-
-export const SOURCE_LABEL: Record<LeadSource, string> = {
-  call: "Call",
-  whatsapp: "Whatsapp",
-  email: "Email",
-  "walk-in": "Walk-in",
-  existing: "Existing",
 };

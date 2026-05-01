@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Lead, LeadStatus, STATUSES, STATUS_DOT, SOURCE_LABEL } from "@/lib/leads";
+import { Lead, LeadStatus, STATUSES, STATUS_DOT } from "@/lib/leads";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -41,7 +41,7 @@ export default function Analytics() {
   const sourceData = useMemo(() => {
     const map = new Map<string, number>();
     leads.forEach((l) => {
-      const src = l.source ? SOURCE_LABEL[l.source] : "Unknown";
+      const src = l.source?.trim() || "Unknown";
       map.set(src, (map.get(src) ?? 0) + 1);
     });
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
