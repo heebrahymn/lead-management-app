@@ -1,4 +1,5 @@
-import { LayoutDashboard, Users, Settings, LogOut, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Settings, LogOut, BarChart3, ShieldCheck } from "lucide-react";
+import { useRoles } from "@/hooks/useRole";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -17,18 +18,26 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-const items = [
+const baseItems = [
   { title: "Overview", url: "/", icon: LayoutDashboard, end: true },
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
-  { title: "Settings", url: "/settings", icon: Settings },
 ];
+
+const settingsItem = { title: "Settings", url: "/settings", icon: Settings };
+const usersItem = { title: "Users", url: "/users", icon: ShieldCheck };
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const { isSuperadmin } = useRoles();
+  const items = [
+    ...baseItems,
+    ...(isSuperadmin ? [usersItem] : []),
+    settingsItem,
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -49,12 +58,13 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
+                const isEnd = (item as any).end as boolean | undefined;
                 const active =
-                  item.end ? pathname === item.url : pathname.startsWith(item.url);
+                  isEnd ? pathname === item.url : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <NavLink to={item.url} end={item.end} className="flex items-center gap-2">
+                      <NavLink to={item.url} end={isEnd} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </NavLink>

@@ -10,6 +10,7 @@ import Overview from "./pages/Overview.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import Settings from "./pages/Settings.tsx";
 import Auth from "./pages/Auth.tsx";
+import Users from "./pages/Users.tsx";
 import LeadDetail from "./pages/LeadDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/leads" element={<Index />} />
               <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/users" element={<Users />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
