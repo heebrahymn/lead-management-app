@@ -95,7 +95,8 @@ export default function LeadDetail() {
     if (!lead) return;
     const v = value.trim() || null;
     if ((lead as any)[field] === v) return;
-    const { error } = await supabase.from("leads").update({ [field]: v }).eq("id", lead.id);
+    const payload: Partial<Pick<Lead, "name" | "email" | "phone" | "source">> = { [field]: v };
+    const { error } = await supabase.from("leads").update(payload).eq("id", lead.id);
     if (error) toast.error(error.message);
   };
 
