@@ -11,7 +11,6 @@ import { Loader2 } from "lucide-react";
 export default function Auth() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,22 +23,17 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
-        });
-        if (error) throw error;
-        toast.success("Account created. You can sign in now.");
-        setMode("signin");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/", { replace: true });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate("/", { replace: true });
     } catch (err: any) {
-      toast.error(err.message ?? "Authentication failed");
+      const msg = err?.message ?? "Sign in failed";
+      // Friendlier copy when account does not exist
+      if (/invalid login/i.test(msg)) {
+        toast.error("Invalid credentials. Contact your superadmin if you don't have an account.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +56,7 @@ export default function Auth() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Leadly</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" ? "Sign in to your workspace" : "Create your workspace account"}
+            Sign in to your workspace
           </p>
         </div>
 
@@ -88,26 +82,19 @@ export default function Auth() {
               id="password"
               type="password"
               required
-              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              autoComplete="current-password"
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "signin" ? "Sign in" : "Create account"}
+            Sign in
           </Button>
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="w-full text-center text-sm text-muted-foreground transition hover:text-foreground"
-          >
-            {mode === "signin"
-              ? "Don't have an account? Sign up"
-              : "Already have an account? Sign in"}
-          </button>
+          <p className="text-center text-xs text-muted-foreground">
+            Accounts are provisioned by your superadmin. Self sign-up is disabled.
+          </p>
         </form>
       </div>
     </main>
