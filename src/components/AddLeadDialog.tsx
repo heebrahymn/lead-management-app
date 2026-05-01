@@ -47,7 +47,7 @@ export function AddLeadDialog({ onCreated, trigger }: Props) {
       name: form.name.trim(),
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
-      source: form.source.trim() || null,
+      source: (form.source.trim() || null) as any,
       status: "new",
       created_by: userData.user?.id ?? null,
     });
