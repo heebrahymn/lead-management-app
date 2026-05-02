@@ -17,7 +17,6 @@ export function StatusBadge({ status, className, size = "sm" }: Props) {
         className
       )}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[status])} />
       {STATUS_LABEL[status]}
     </span>
   );

@@ -53,18 +53,21 @@ export default function Overview() {
     };
   }, []);
 
-  const counts = useMemo(() => {
+  const { counts, pipelineValue } = useMemo(() => {
     const c: Record<LeadStatus, number> = {
       new: 0, interested: 0, no_response: 0, converted: 0, lost: 0, closed: 0,
     };
-    leads.forEach((l) => c[l.status]++);
-    return c;
+    let total = 0;
+    leads.forEach((l) => {
+      c[l.status]++;
+      total += Number(l.deal_value || 0);
+    });
+    return { counts: c, pipelineValue: total };
   }, [leads]);
 
   const conversionRate = leads.length
     ? Math.round((counts.converted / leads.length) * 100)
     : 0;
-  const activeLeads = counts.new + counts.interested + counts.no_response;
 
   const trend = useMemo(() => {
     const days = 14;
@@ -108,7 +111,7 @@ export default function Overview() {
       {/* KPI Cards */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Users} label="Total leads" value={leads.length} tint="primary" />
-        <KpiCard icon={Clock} label="Active" value={activeLeads} tint="amber" />
+        <KpiCard icon={TrendingUp} label="Conversion value" value={`£${pipelineValue.toLocaleString()}`} tint="amber" />
         <KpiCard icon={CheckCircle2} label="Converted" value={counts.converted} tint="green" />
         <KpiCard icon={TrendingUp} label="Conversion rate" value={`${conversionRate}%`} tint="primary" />
       </div>

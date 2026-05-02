@@ -66,6 +66,21 @@ export default function Analytics() {
         </p>
       </div>
 
+      <div className="mb-4 rounded-xl border border-border bg-card p-5 shadow-soft">
+        <h2 className="text-sm font-semibold">Pipeline summary</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {STATUSES.map((s) => (
+            <div key={s.value} className="rounded-lg border border-border bg-background p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s.value])} />
+                {s.label}
+              </div>
+              <div className="mt-1 text-xl font-semibold">{counts[s.value]}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Leads by status" description="Distribution across pipeline">
           <BarChart data={statusData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
@@ -112,21 +127,6 @@ export default function Analytics() {
             </BarChart>
           )}
         </ChartCard>
-      </div>
-
-      <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-soft">
-        <h2 className="text-sm font-semibold">Pipeline summary</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {STATUSES.map((s) => (
-            <div key={s.value} className="rounded-lg border border-border bg-background p-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s.value])} />
-                {s.label}
-              </div>
-              <div className="mt-1 text-xl font-semibold">{counts[s.value]}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

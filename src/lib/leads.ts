@@ -6,6 +6,27 @@ export type LeadStatus =
   | "lost"
   | "closed";
 
+export const SOURCES = ["call", "whatsapp", "email", "walk-in", "existing"] as const;
+export type LeadSource = (typeof SOURCES)[number];
+
+export const SOURCE_LABEL: Record<string, string> = {
+  call: "Call",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  "walk-in": "Walk-in",
+  existing: "Existing",
+};
+
+export const SERVICES = [
+  "Wheel Balancing and Alignment",
+  "Brake Service",
+  "Tyre Installation",
+  "Suspension and shock repair",
+  "Car detailing",
+  "Ceramic Coating",
+  "AC Repair",
+] as const;
+
 export interface Lead {
   id: string;
   name: string;
@@ -14,9 +35,26 @@ export interface Lead {
   source: string | null;
   status: LeadStatus;
   tags: string[];
+  assigned_to: string | null;
+  followup_at: string | null;
+  deal_value: number | null;
+  company: string | null;
+  city: string | null;
+  service: string | null;
+  reg_number: string | null;
+  vehicle_model: string | null;
+  notes: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type ManagedUser = {
+  id: string;
+  email: string;
+  full_name?: string;
+  roles: string[];
+};
 
 export interface LeadNote {
   id: string;

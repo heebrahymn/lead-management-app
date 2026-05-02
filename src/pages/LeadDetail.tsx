@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 import { StatusPicker } from "@/components/StatusPicker";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL } from "@/lib/leads";
+import { LeadFormDialog } from "@/components/AddLeadDialog";
+import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL, ManagedUser, SOURCES, SOURCE_LABEL } from "@/lib/leads";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,10 +22,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Loader2, Mail, Phone, Trash2, Send, X, Plus, Tag,
+  ArrowLeft, Loader2, Mail, Phone, Trash2, Send, X, Plus, Tag, Calendar, User, Pencil
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +45,7 @@ export default function LeadDetail() {
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [users, setUsers] = useState<ManagedUser[]>([]);
 
   useEffect(() => {
     if (!authLoading && !session) navigate("/auth", { replace: true });
@@ -45,25 +54,38 @@ export default function LeadDetail() {
   const load = async () => {
     if (!id) return;
     setLoading(true);
-    const [{ data: leadData, error: lErr }, { data: noteData }, { data: histData }] =
-      await Promise.all([
-        supabase.from("leads").select("*").eq("id", id).maybeSingle(),
-        supabase
-          .from("lead_notes")
-          .select("*")
-          .eq("lead_id", id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("lead_status_history")
-          .select("*")
-          .eq("lead_id", id)
-          .order("created_at", { ascending: false }),
-      ]);
-    if (lErr) toast.error(lErr.message);
-    setLead((leadData as Lead) ?? null);
-    setNotes((noteData ?? []) as LeadNote[]);
-    setHistory((histData ?? []) as StatusHistoryEntry[]);
-    setLoading(false);
+    try {
+      const [{ data: leadData, error: lErr }, { data: noteData }, { data: histData }] =
+        await Promise.all([
+          supabase.from("leads").select("*").eq("id", id).maybeSingle(),
+          supabase
+            .from("lead_notes")
+            .select("*")
+            .eq("lead_id", id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("lead_status_history")
+            .select("*")
+            .eq("lead_id", id)
+            .order("created_at", { ascending: false }),
+        ]);
+      if (lErr) throw lErr;
+      setLead((leadData as Lead) ?? null);
+      setNotes((noteData ?? []) as LeadNote[]);
+      setHistory((histData ?? []) as StatusHistoryEntry[]);
+      await loadUsers();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load lead");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+      body: { action: "list" },
+    });
+    if (!error && data?.users) setUsers(data.users);
   };
 
   useEffect(() => {
@@ -91,13 +113,20 @@ export default function LeadDetail() {
     else toast.success("Status updated");
   };
 
-  const updateField = async (field: "name" | "email" | "phone" | "source", value: string) => {
+  const updateField = async (field: "name" | "email" | "phone" | "source" | "assigned_to" | "followup_at" | "company" | "city" | "service" | "reg_number" | "vehicle_model", value: string | null) => {
     if (!lead) return;
-    const v = value.trim() || null;
+    const v = typeof value === "string" ? value.trim() || null : value;
     if ((lead as any)[field] === v) return;
-    const payload: Partial<Pick<Lead, "name" | "email" | "phone" | "source">> = { [field]: v };
+
+    // Update local state immediately for instant feedback
+    setLead({ ...lead, [field]: v });
+
+    const payload = { [field]: v };
     const { error } = await supabase.from("leads").update(payload as any).eq("id", lead.id);
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      load(); // Revert to database state if save fails
+    }
   };
 
   const addNote = async () => {
@@ -112,6 +141,7 @@ export default function LeadDetail() {
     setSavingNote(false);
     if (error) { toast.error(error.message); return; }
     setNoteText("");
+    toast.success("Note added");
   };
 
   const addTag = async () => {
@@ -162,21 +192,21 @@ export default function LeadDetail() {
 
   return (
     <div>
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-full px-4 py-8 sm:px-6">
         <Link
           to="/leads"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground ml-2"
         >
           <ArrowLeft className="h-4 w-4" />
           All leads
         </Link>
 
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between px-2">
           <div className="min-w-0 flex-1">
             <input
               defaultValue={lead.name}
               onBlur={(e) => updateField("name", e.target.value)}
-              className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-3xl font-semibold tracking-tight outline-none transition hover:border-border focus:border-border focus:bg-card"
+              className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-3xl font-bold tracking-tight outline-none transition hover:border-border focus:border-border focus:bg-card"
             />
             <div className="mt-2 flex items-center gap-3">
               <StatusPicker status={lead.status} onChange={updateStatus} size="md" />
@@ -185,112 +215,111 @@ export default function LeadDetail() {
               </span>
             </div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-4 w-4" /> Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove {lead.name} and all associated notes.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteLead}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently remove {lead.name} and all associated notes.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteLead}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <LeadFormDialog
+              lead={lead}
+              onSuccess={load}
+              trigger={
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-4 w-4" /> Edit
+                </Button>
+              }
+            />
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left: details */}
-          <section className="space-y-6 lg:col-span-2">
-            {/* Note composer */}
-            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
-              <Textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Log a note about this lead… (e.g., called, left voicemail)"
-                rows={3}
-                className="resize-none border-0 p-0 shadow-none focus-visible:ring-0"
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    addNote();
-                  }
-                }}
-              />
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">⌘ + Enter to save</span>
-                <Button size="sm" onClick={addNote} disabled={savingNote || !noteText.trim()} className="gap-1.5">
-                  {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                  Add note
-                </Button>
-              </div>
-            </div>
-
-            {/* Timeline */}
-            <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Activity
-              </h3>
-              {notes.length === 0 && history.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-                  No activity yet.
-                </p>
-              ) : (
-                <Timeline notes={notes} history={history} />
-              )}
-            </div>
-          </section>
-
-          {/* Right: meta */}
-          <aside className="space-y-6">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
-              <h3 className="mb-3 text-sm font-semibold">Contact</h3>
-              <dl className="space-y-3 text-sm">
-                <FieldRow icon={<Mail className="h-3.5 w-3.5" />} label="Email">
-                  <EditableField
-                    value={lead.email ?? ""}
-                    placeholder="—"
-                    onSave={(v) => updateField("email", v)}
-                  />
+        <div className="grid gap-6 lg:grid-cols-12 px-2">
+          {/* Column 1: Lead Info */}
+          <aside className="space-y-6 lg:col-span-4">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm h-full">
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Lead Information</h3>
+              <dl className="space-y-4 text-sm">
+                <FieldRow label="Conversion Value">
+                  <span className="text-xl font-bold text-foreground">£{Number(lead.deal_value || 0).toLocaleString()}</span>
                 </FieldRow>
-                <FieldRow icon={<Phone className="h-3.5 w-3.5" />} label="Phone">
-                  <EditableField
-                    value={lead.phone ?? ""}
-                    placeholder="—"
-                    onSave={(v) => updateField("phone", v)}
-                  />
+                <FieldRow icon={<Mail className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Email">
+                  <span className="font-medium text-foreground">{lead.email || "—"}</span>
+                </FieldRow>
+                <FieldRow icon={<Phone className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Phone">
+                  <span className="font-medium text-foreground">{lead.phone || "—"}</span>
+                </FieldRow>
+                <FieldRow label="Company">
+                  <span className="font-medium text-foreground">{lead.company || "—"}</span>
+                </FieldRow>
+                <FieldRow label="City">
+                  <span className="font-medium capitalize text-foreground">{lead.city || "—"}</span>
                 </FieldRow>
                 <FieldRow label="Source">
-                  <EditableField
-                    value={lead.source ?? ""}
-                    placeholder="—"
-                    onSave={(v) => updateField("source", v)}
-                  />
+                  <span className="font-medium text-foreground">{lead.source ? SOURCE_LABEL[lead.source] : "—"}</span>
+                </FieldRow>
+                <FieldRow icon={<User className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Assign to">
+                  <span className="font-medium text-foreground">
+                    {lead.assigned_to ? (
+                      users.find(u => u.id === lead.assigned_to)?.full_name || 
+                      users.find(u => u.id === lead.assigned_to)?.email?.split("@")[0] || 
+                      "Unknown"
+                    ) : "Unassigned"}
+                  </span>
+                </FieldRow>
+                <FieldRow icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Follow-up">
+                  <span className="font-medium text-foreground">
+                    {lead.followup_at ? format(new Date(lead.followup_at), "MM/dd/yyyy") : "—"}
+                  </span>
                 </FieldRow>
                 <FieldRow label="Created">
-                  <span className="text-foreground">
+                  <span className="font-medium text-foreground">
                     {format(new Date(lead.created_at), "MMM d, yyyy")}
                   </span>
                 </FieldRow>
               </dl>
             </div>
+          </aside>
 
-            <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
-              <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+          {/* Column 2: Vehicle & Tags */}
+          <aside className="space-y-6 lg:col-span-4">
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle & Service</h3>
+              <dl className="space-y-6 text-sm">
+                <FieldRow label="Service">
+                  <span className="font-medium text-foreground">{lead.service || "—"}</span>
+                </FieldRow>
+                <FieldRow label="Reg No.">
+                  <span className="font-bold uppercase text-primary bg-primary-muted px-2 py-0.5 rounded text-[11px]">{lead.reg_number || "—"}</span>
+                </FieldRow>
+                <FieldRow label="Model">
+                  <span className="font-medium text-foreground">{lead.vehicle_model || "—"}</span>
+                </FieldRow>
+              </dl>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-6 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 <Tag className="h-3.5 w-3.5" /> Tags
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {lead.tags.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-foreground"
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
                   >
                     {t}
                     <button onClick={() => removeTag(t)} className="text-muted-foreground hover:text-foreground">
@@ -302,20 +331,61 @@ export default function LeadDetail() {
                   <span className="text-xs text-muted-foreground">No tags yet</span>
                 )}
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-4 flex gap-2">
                 <Input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
                   placeholder="Add tag…"
-                  className="h-8 text-sm"
+                  className="h-8 text-xs"
                 />
-                <Button size="sm" variant="outline" onClick={addTag} className="h-8 gap-1">
+                <Button size="sm" variant="outline" onClick={addTag} className="h-8 px-2">
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
           </aside>
+
+          {/* Column 3: Note & Timeline (Right side) */}
+          <section className="space-y-6 lg:col-span-4">
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <Textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Log a note..."
+                rows={2}
+                className="resize-none border-0 p-0 shadow-none focus-visible:ring-0"
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    addNote();
+                  }
+                }}
+              />
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold">⌘ + Enter to save</span>
+                <Button size="sm" onClick={addNote} disabled={savingNote || !noteText.trim()} className="h-8 gap-1.5 bg-[#6E3FF3] hover:bg-[#5B34CC]">
+                  {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Add note
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                Activity History
+              </h3>
+              <div className="pl-1">
+                {notes.length === 0 && history.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+                    No activity yet.
+                  </p>
+                ) : (
+                  <Timeline notes={notes} history={history} />
+                )}
+              </div>
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -324,11 +394,11 @@ export default function LeadDetail() {
 
 function FieldRow({ icon, label, children }: { icon?: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3">
-      <dt className="flex w-20 shrink-0 items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+    <div className="grid grid-cols-[180px_1fr] items-start gap-8">
+      <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/80 whitespace-nowrap">
         {icon}{label}
       </dt>
-      <dd className="min-w-0 flex-1 text-sm">{children}</dd>
+      <dd className="min-w-0 flex-1 text-sm font-medium text-foreground">{children}</dd>
     </div>
   );
 }

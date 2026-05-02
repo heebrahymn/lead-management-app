@@ -8,6 +8,7 @@ import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index.tsx";
 import Overview from "./pages/Overview.tsx";
 import Analytics from "./pages/Analytics.tsx";
+import WhatsAppAnalytics from "./pages/WhatsAppAnalytics.tsx";
 import Settings from "./pages/Settings.tsx";
 import Auth from "./pages/Auth.tsx";
 import Users from "./pages/Users.tsx";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/leads" element={<Index />} />
               <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/whatsapp-analytics" element={<WhatsAppAnalytics />} />
               <Route path="/users" element={<Users />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

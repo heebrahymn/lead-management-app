@@ -38,11 +38,11 @@
     --radius: 0.625rem;
 
     /* Status tokens (soft bg + strong fg) */
-    --status-new-bg: 220 14% 93%;
-    --status-new-fg: 220 14% 30%;
+    --status-new-bg: 212 95% 94%;
+    --status-new-fg: 212 80% 38%;
 
-    --status-interested-bg: 212 95% 94%;
-    --status-interested-fg: 212 80% 38%;
+    --status-interested-bg: 30 95% 92%;
+    --status-interested-fg: 25 80% 38%;
 
     --status-no-response-bg: 30 95% 92%;
     --status-no-response-fg: 25 80% 38%;

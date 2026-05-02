@@ -25,3 +25,10 @@ dist-ssr
 
 # Supabase
 supabase/.temp/
+
+# Temp/Scratch
+.agents/
+scratch/
+temp_pg/
+.env
+.env.local
