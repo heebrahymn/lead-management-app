@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const WORKING_HOURS_START = 8;
-export const WORKING_HOURS_END = 18;
+export const WORKING_HOURS_END = 17;
 
 export interface WhatsAppMessage {
   id: string;
