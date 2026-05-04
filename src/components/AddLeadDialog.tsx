@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Plus, Calendar, User, Building, Phone as PhoneIcon, Mail, MapPin, Tag, Briefcase, Hash, Car, FileText } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { z } from "zod";
 import {
   Select,
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SOURCES, SOURCE_LABEL, ManagedUser, SERVICES, STATUSES, Lead } from "@/lib/leads";
+import { SOURCES, SOURCE_LABEL, ManagedUser, SERVICES, STATUSES, Lead, LeadStatus, LeadSource, AdminFunctionResponse } from "@/lib/leads";
 import { useEffect } from "react";
 
 const schema = z.object({
@@ -85,7 +85,7 @@ export function LeadFormDialog({ lead, onSuccess, trigger }: Props) {
 
   useEffect(() => {
     if (open) {
-      supabase.functions.invoke("admin-create-user", {
+      supabase.functions.invoke<AdminFunctionResponse>("admin-create-user", {
         body: { action: "list" },
       }).then(({ data }) => {
         if (data?.users) setUsers(data.users);
@@ -128,8 +128,8 @@ export function LeadFormDialog({ lead, onSuccess, trigger }: Props) {
       name: form.name.trim(),
       email: form.email.trim() || null,
       phone: form.phone.trim() || null,
-      source: (form.source.trim() || null) as any,
-      status: (form.status || "new") as any,
+      source: (form.source.trim() || "call") as LeadSource,
+      status: (form.status || "new") as LeadStatus,
       assigned_to: form.assigned_to && form.assigned_to !== "none" ? form.assigned_to : null,
       followup_at: form.followup_at ? new Date(form.followup_at).toISOString() : null,
       deal_value: form.deal_value ? Number(form.deal_value) : null,

@@ -37,38 +37,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null);
     const action = body?.action ?? "list";
 
-    if (action === "list") {
-      const { data: list, error: listErr } =
-        await admin.auth.admin.listUsers({ perPage: 200 });
-      if (listErr) return json({ error: listErr.message }, 400);
-
-      const { data: roles } = await admin.from("user_roles").select("user_id, role");
-      const { data: profiles } = await admin.from("profiles").select("id, full_name");
-      
-      const roleMap = new Map<string, string[]>();
-      (roles ?? []).forEach((r: any) => {
-        const arr = roleMap.get(r.user_id) ?? [];
-        arr.push(r.role);
-        roleMap.set(r.user_id, arr);
-      });
-
-      const profileMap = new Map<string, string>();
-      (profiles ?? []).forEach((p: any) => {
-        profileMap.set(p.id, p.full_name);
-      });
-
-      const users = list.users.map((u) => ({
-        id: u.id,
-        email: u.email,
-        full_name: profileMap.get(u.id) ?? "",
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at,
-        roles: roleMap.get(u.id) ?? [],
-      }));
-      return json({ users });
-    }
-
-    // All other actions require superadmin
+    // SECURITY: All actions in this admin function require superadmin role
     const { data: roleRow } = await admin
       .from("user_roles")
       .select("role")
@@ -77,7 +46,20 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!roleRow) {
-      return json({ error: "Forbidden: superadmin only" }, 403);
+      console.warn(`Unauthorized admin attempt by user ${callerId}`);
+      return json({ error: "Forbidden: superadmin access required" }, 403);
+    }
+
+    if (action === "list") {
+      // Optimized query using the user_details view
+      const { data: users, error: listErr } = await admin
+        .from("user_details")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (listErr) return json({ error: listErr.message }, 400);
+
+      return json({ users });
     }
 
     if (action === "create") {
@@ -112,15 +94,12 @@ Deno.serve(async (req) => {
       if (!targetId) return json({ error: "user_id required" }, 400);
 
       if (newRole) {
+        // Upsert role logic
         const { error: roleErr } = await admin
           .from("user_roles")
-          .update({ role: newRole })
-          .eq("user_id", targetId);
+          .upsert({ user_id: targetId, role: newRole }, { onConflict: "user_id,role" });
         
-        if (roleErr || (await admin.from("user_roles").select("role").eq("user_id", targetId)).data?.length === 0) {
-          // If no row exists or update failed, insert it
-          await admin.from("user_roles").upsert({ user_id: targetId, role: newRole }, { onConflict: "user_id,role" });
-        }
+        if (roleErr) return json({ error: roleErr.message }, 400);
       }
 
       if (fullName !== undefined) {

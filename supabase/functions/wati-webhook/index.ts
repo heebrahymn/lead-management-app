@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-wati-authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -21,8 +21,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // SECURITY: Hard Enforcement of Webhook Secret
+    const webhookSecret = Deno.env.get("WATI_WEBHOOK_SECRET");
+    const urlObj = new URL(req.url);
+    const providedSecret = urlObj.searchParams.get("token") || req.headers.get("x-wati-authorization");
+
+    if (!webhookSecret) {
+      console.error("❌ CRITICAL: WATI_WEBHOOK_SECRET is not set in environment variables.");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (providedSecret !== webhookSecret) {
+      console.warn("🚫 UNAUTHORIZED WEBHOOK ATTEMPT: Mismatched or missing secret.");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
-    console.log("FULL WEBHOOK BODY:", JSON.stringify(body, null, 2));
+    // Reduced logging in production to protect PII
+    console.log(`📥 Incoming webhook: ${body.waId || 'unknown'} - Type: ${body.type || 'unknown'}`);
 
     const url = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

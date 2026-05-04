@@ -18,15 +18,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-const baseItems = [
+interface NavItem {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  end?: boolean;
+}
+
+const baseItems: NavItem[] = [
   { title: "Overview", url: "/", icon: LayoutDashboard, end: true },
-  { title: "Leads", url: "/leads", icon: Users },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-  { title: "WA Analytics", url: "/whatsapp-analytics", icon: MessageCircle },
+  { title: "Leads Management", url: "/leads", icon: Users },
+  { title: "Lead Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "WhatsApp Analytics", url: "/whatsapp-analytics", icon: MessageCircle },
 ];
 
-const settingsItem = { title: "Settings", url: "/settings", icon: Settings };
-const usersItem = { title: "Users", url: "/users", icon: ShieldCheck };
+const settingsItem: NavItem = { title: "Settings", url: "/settings", icon: Settings };
+const usersItem: NavItem = { title: "Users", url: "/users", icon: ShieldCheck };
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -34,7 +41,7 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
   const { isSuperadmin } = useRoles();
-  const items = [
+  const items: NavItem[] = [
     ...baseItems,
     ...(isSuperadmin ? [usersItem] : []),
     settingsItem,
@@ -59,13 +66,11 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
-                const isEnd = (item as any).end as boolean | undefined;
-                const active =
-                  isEnd ? pathname === item.url : pathname.startsWith(item.url);
+                const active = item.end ? pathname === item.url : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <NavLink to={item.url} end={isEnd} className="flex items-center gap-2">
+                      <NavLink to={item.url} end={item.end} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </NavLink>

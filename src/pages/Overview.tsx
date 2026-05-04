@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Lead, LeadStatus, STATUSES, STATUS_DOT, STATUS_LABEL } from "@/lib/leads";
-import { Loader2, TrendingUp, Users, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { Lead, LeadStatus, STATUSES, STATUS_DOT } from "@/lib/leads";
+import { Loader2, TrendingUp, Users, CheckCircle2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, subDays, startOfDay } from "date-fns";
 import {
@@ -20,38 +21,36 @@ import {
 import { StatusBadge } from "@/components/StatusBadge";
 
 export default function Overview() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     document.title = "Overview — Leadly CRM";
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ["leads", "all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("leads")
         .select("*")
         .order("updated_at", { ascending: false });
-      if (active) {
-        setLeads((data ?? []) as Lead[]);
-        setLoading(false);
-      }
-    })();
+      if (error) throw error;
+      return (data || []) as Lead[];
+    },
+  });
 
+  // Real-time subscription
+  useEffect(() => {
     const channel = supabase
       .channel("overview-leads")
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, async () => {
-        const { data } = await supabase.from("leads").select("*").order("updated_at", { ascending: false });
-        setLeads((data ?? []) as Lead[]);
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
       })
       .subscribe();
     return () => {
-      active = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
   const { counts, pipelineValue } = useMemo(() => {
     const c: Record<LeadStatus, number> = {
@@ -59,7 +58,9 @@ export default function Overview() {
     };
     let total = 0;
     leads.forEach((l) => {
-      c[l.status]++;
+      if (c[l.status] !== undefined) {
+        c[l.status]++;
+      }
       total += Number(l.deal_value || 0);
     });
     return { counts: c, pipelineValue: total };
@@ -91,7 +92,7 @@ export default function Overview() {
 
   const recent = leads.slice(0, 5);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

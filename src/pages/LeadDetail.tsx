@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoles } from "@/hooks/useRole";
 
 import { StatusPicker } from "@/components/StatusPicker";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LeadFormDialog } from "@/components/AddLeadDialog";
-import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, STATUS_LABEL, ManagedUser, SOURCES, SOURCE_LABEL } from "@/lib/leads";
+import { Lead, LeadNote, LeadStatus, StatusHistoryEntry, SOURCE_LABEL, ManagedUser } from "@/lib/leads";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,152 +28,144 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
-  const [lead, setLead] = useState<Lead | null>(null);
-  const [notes, setNotes] = useState<LeadNote[]>([]);
-  const [history, setHistory] = useState<StatusHistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const { isSuperadmin } = useRoles();
+  
   const [noteText, setNoteText] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [users, setUsers] = useState<ManagedUser[]>([]);
 
-  useEffect(() => {
-    if (!authLoading && !session) navigate("/auth", { replace: true });
-  }, [session, authLoading, navigate]);
+  // Fetch Users
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: { action: "list" },
+      });
+      if (error) throw error;
+      return (data?.users || []) as ManagedUser[];
+    },
+  });
 
-  const load = async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const [{ data: leadData, error: lErr }, { data: noteData }, { data: histData }] =
-        await Promise.all([
-          supabase.from("leads").select("*").eq("id", id).maybeSingle(),
-          supabase
-            .from("lead_notes")
-            .select("*")
-            .eq("lead_id", id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("lead_status_history")
-            .select("*")
-            .eq("lead_id", id)
-            .order("created_at", { ascending: false }),
-        ]);
-      if (lErr) throw lErr;
-      setLead((leadData as Lead) ?? null);
-      setNotes((noteData ?? []) as LeadNote[]);
-      setHistory((histData ?? []) as StatusHistoryEntry[]);
-      await loadUsers();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load lead");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const userMap = useMemo(() => {
+    const map = new Map<string, ManagedUser>();
+    users.forEach(u => map.set(u.id, u));
+    return map;
+  }, [users]);
 
-  const loadUsers = async () => {
-    const { data, error } = await supabase.functions.invoke("admin-create-user", {
-      body: { action: "list" },
-    });
-    if (!error && data?.users) setUsers(data.users);
-  };
+  // Fetch Lead Data
+  const { data: lead, isLoading: leadLoading } = useQuery({
+    queryKey: ["lead", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("leads").select("*").eq("id", id).maybeSingle();
+      if (error) throw error;
+      return data as Lead;
+    },
+    enabled: !!id,
+  });
 
+  // Fetch Notes
+  const { data: notes = [] } = useQuery({
+    queryKey: ["lead-notes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_notes")
+        .select("*")
+        .eq("lead_id", id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as LeadNote[];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch Status History
+  const { data: history = [] } = useQuery({
+    queryKey: ["lead-history", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_status_history")
+        .select("*")
+        .eq("lead_id", id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as StatusHistoryEntry[];
+    },
+    enabled: !!id,
+  });
+
+  // Real-time subscription
   useEffect(() => {
     if (!session || !id) return;
-    load();
     const channel = supabase
-      .channel(`lead-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `id=eq.${id}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "lead_notes", filter: `lead_id=eq.${id}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "lead_status_history", filter: `lead_id=eq.${id}` }, () => load())
+      .channel(`lead-detail-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["lead", id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "lead_notes", filter: `lead_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["lead-notes", id] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "lead_status_history", filter: `lead_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["lead-history", id] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, id]);
+  }, [session, id, queryClient]);
 
   useEffect(() => {
     document.title = lead ? `${lead.name} — Leadly` : "Lead — Leadly";
   }, [lead]);
 
-  const updateStatus = async (status: LeadStatus) => {
-    if (!lead) return;
-    setLead({ ...lead, status });
-    const { error } = await supabase.from("leads").update({ status }).eq("id", lead.id);
-    if (error) toast.error(error.message);
-    else toast.success("Status updated");
-  };
+  // Mutations
+  const updateMutation = useMutation({
+    mutationFn: async (payload: Partial<Lead>) => {
+      const { error } = await supabase.from("leads").update(payload).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", id] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-  const updateField = async (field: "name" | "email" | "phone" | "source" | "assigned_to" | "followup_at" | "company" | "city" | "service" | "reg_number" | "vehicle_model", value: string | null) => {
-    if (!lead) return;
-    const v = typeof value === "string" ? value.trim() || null : value;
-    if ((lead as any)[field] === v) return;
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase.from("lead_notes").insert({
+        lead_id: id,
+        content: content.trim(),
+        created_by: userData.user?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteText("");
+      toast.success("Note added");
+      queryClient.invalidateQueries({ queryKey: ["lead-notes", id] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-    // Update local state immediately for instant feedback
-    setLead({ ...lead, [field]: v });
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!isSuperadmin) {
+        throw new Error("You don't have permission to delete");
+      }
+      const { error } = await supabase.from("leads").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lead deleted");
+      navigate("/leads", { replace: true });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-    const payload = { [field]: v };
-    const { error } = await supabase.from("leads").update(payload as any).eq("id", lead.id);
-    if (error) {
-      toast.error(error.message);
-      load(); // Revert to database state if save fails
-    }
-  };
-
-  const addNote = async () => {
-    if (!lead || !noteText.trim()) return;
-    setSavingNote(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const { error } = await supabase.from("lead_notes").insert({
-      lead_id: lead.id,
-      content: noteText.trim(),
-      created_by: userData.user?.id ?? null,
-    });
-    setSavingNote(false);
-    if (error) { toast.error(error.message); return; }
-    setNoteText("");
-    toast.success("Note added");
-  };
-
-  const addTag = async () => {
-    const t = tagInput.trim();
-    if (!t || !lead) return;
-    if (lead.tags.includes(t)) { setTagInput(""); return; }
-    const newTags = [...lead.tags, t];
-    setLead({ ...lead, tags: newTags });
-    setTagInput("");
-    const { error } = await supabase.from("leads").update({ tags: newTags }).eq("id", lead.id);
-    if (error) toast.error(error.message);
-  };
-
-  const removeTag = async (t: string) => {
-    if (!lead) return;
-    const newTags = lead.tags.filter((x) => x !== t);
-    setLead({ ...lead, tags: newTags });
-    const { error } = await supabase.from("leads").update({ tags: newTags }).eq("id", lead.id);
-    if (error) toast.error(error.message);
-  };
-
-  const deleteLead = async () => {
-    if (!lead) return;
-    const { error } = await supabase.from("leads").delete().eq("id", lead.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Lead deleted");
-    navigate("/leads", { replace: true });
-  };
-
-  if (authLoading || !session || loading) {
+  if (leadLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -190,6 +184,17 @@ export default function LeadDetail() {
     );
   }
 
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (!t || lead.tags.includes(t)) { setTagInput(""); return; }
+    updateMutation.mutate({ tags: [...lead.tags, t] });
+    setTagInput("");
+  };
+
+  const removeTag = (t: string) => {
+    updateMutation.mutate({ tags: lead.tags.filter((x) => x !== t) });
+  };
+
   return (
     <div>
       <main className="mx-auto max-w-full px-4 py-8 sm:px-6">
@@ -205,39 +210,52 @@ export default function LeadDetail() {
           <div className="min-w-0 flex-1">
             <input
               defaultValue={lead.name}
-              onBlur={(e) => updateField("name", e.target.value)}
+              onBlur={(e) => updateMutation.mutate({ name: e.target.value })}
               className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-3xl font-bold tracking-tight outline-none transition hover:border-border focus:border-border focus:bg-card"
             />
             <div className="mt-2 flex items-center gap-3">
-              <StatusPicker status={lead.status} onChange={updateStatus} size="md" />
+              <StatusPicker 
+                status={lead.status} 
+                onChange={(s) => updateMutation.mutate({ status: s })} 
+                size="md" 
+              />
               <span className="text-sm text-muted-foreground">
                 Updated {formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently remove {lead.name} and all associated notes.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={deleteLead}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {isSuperadmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove {lead.name} and all associated notes.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => {
+                        deleteMutation.mutate();
+                      }} 
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <LeadFormDialog
               lead={lead}
-              onSuccess={load}
+              onSuccess={() => queryClient.invalidateQueries({ queryKey: ["lead", id] })}
               trigger={
                 <Button variant="outline" size="sm" className="gap-2">
                   <Pencil className="h-4 w-4" /> Edit
@@ -248,65 +266,45 @@ export default function LeadDetail() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-12 px-2">
-          {/* Column 1: Lead Info */}
           <aside className="space-y-6 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm h-full">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Lead Information</h3>
               <dl className="space-y-4 text-sm">
-                <FieldRow label="Conversion Value">
+                <FieldRow label="Value">
                   <span className="text-xl font-bold text-foreground">£{Number(lead.deal_value || 0).toLocaleString()}</span>
                 </FieldRow>
-                <FieldRow icon={<Mail className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Email">
-                  <span className="font-medium text-foreground">{lead.email || "—"}</span>
+                <FieldRow icon={<Mail className="h-3.5 w-3.5" />} label="Email">
+                  <span className="font-medium">{lead.email || "—"}</span>
                 </FieldRow>
-                <FieldRow icon={<Phone className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Phone">
-                  <span className="font-medium text-foreground">{lead.phone || "—"}</span>
-                </FieldRow>
-                <FieldRow label="Company">
-                  <span className="font-medium text-foreground">{lead.company || "—"}</span>
-                </FieldRow>
-                <FieldRow label="City">
-                  <span className="font-medium capitalize text-foreground">{lead.city || "—"}</span>
+                <FieldRow icon={<Phone className="h-3.5 w-3.5" />} label="Phone">
+                  <span className="font-medium">{lead.phone || "—"}</span>
                 </FieldRow>
                 <FieldRow label="Source">
-                  <span className="font-medium text-foreground">{lead.source ? SOURCE_LABEL[lead.source] : "—"}</span>
+                  <span className="font-medium">{lead.source ? SOURCE_LABEL[lead.source] : "—"}</span>
                 </FieldRow>
-                <FieldRow icon={<User className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Assign to">
-                  <span className="font-medium text-foreground">
-                    {lead.assigned_to ? (
-                      users.find(u => u.id === lead.assigned_to)?.full_name || 
-                      users.find(u => u.id === lead.assigned_to)?.email?.split("@")[0] || 
-                      "Unknown"
-                    ) : "Unassigned"}
+                <FieldRow icon={<User className="h-3.5 w-3.5" />} label="Assignee">
+                  <span className="font-medium">
+                    {lead.assigned_to ? (userMap.get(lead.assigned_to)?.full_name || "Assigned") : "Unassigned"}
                   </span>
                 </FieldRow>
-                <FieldRow icon={<Calendar className="h-3.5 w-3.5 text-muted-foreground/60" />} label="Follow-up">
-                  <span className="font-medium text-foreground">
-                    {lead.followup_at ? format(new Date(lead.followup_at), "MM/dd/yyyy") : "—"}
-                  </span>
-                </FieldRow>
-                <FieldRow label="Created">
-                  <span className="font-medium text-foreground">
-                    {format(new Date(lead.created_at), "MMM d, yyyy")}
+                <FieldRow icon={<Calendar className="h-3.5 w-3.5" />} label="Follow-up">
+                  <span className="font-medium">
+                    {lead.followup_at ? format(new Date(lead.followup_at), "MMM d, yyyy") : "—"}
                   </span>
                 </FieldRow>
               </dl>
             </div>
           </aside>
 
-          {/* Column 2: Vehicle & Tags */}
           <aside className="space-y-6 lg:col-span-4">
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
               <h3 className="mb-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle & Service</h3>
               <dl className="space-y-6 text-sm">
                 <FieldRow label="Service">
-                  <span className="font-medium text-foreground">{lead.service || "—"}</span>
+                  <span className="font-medium">{lead.service || "—"}</span>
                 </FieldRow>
                 <FieldRow label="Reg No.">
-                  <span className="font-bold uppercase text-primary bg-primary-muted px-2 py-0.5 rounded text-[11px]">{lead.reg_number || "—"}</span>
-                </FieldRow>
-                <FieldRow label="Model">
-                  <span className="font-medium text-foreground">{lead.vehicle_model || "—"}</span>
+                  <span className="font-bold uppercase text-primary bg-primary-muted px-2 py-0.5 rounded">{lead.reg_number || "—"}</span>
                 </FieldRow>
               </dl>
             </div>
@@ -317,25 +315,19 @@ export default function LeadDetail() {
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {lead.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
-                  >
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
                     {t}
                     <button onClick={() => removeTag(t)} className="text-muted-foreground hover:text-foreground">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
                 ))}
-                {lead.tags.length === 0 && (
-                  <span className="text-xs text-muted-foreground">No tags yet</span>
-                )}
               </div>
               <div className="mt-4 flex gap-2">
                 <Input
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                  onKeyDown={(e) => e.key === "Enter" && addTag()}
                   placeholder="Add tag…"
                   className="h-8 text-xs"
                 />
@@ -346,7 +338,6 @@ export default function LeadDetail() {
             </div>
           </aside>
 
-          {/* Column 3: Note & Timeline (Right side) */}
           <section className="space-y-6 lg:col-span-4">
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
               <Textarea
@@ -355,31 +346,27 @@ export default function LeadDetail() {
                 placeholder="Log a note..."
                 rows={2}
                 className="resize-none border-0 p-0 shadow-none focus-visible:ring-0"
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    addNote();
-                  }
-                }}
+                onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === "Enter" && addNoteMutation.mutate(noteText)}
               />
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-[10px] text-muted-foreground uppercase font-semibold">⌘ + Enter to save</span>
-                <Button size="sm" onClick={addNote} disabled={savingNote || !noteText.trim()} className="h-8 gap-1.5 bg-[#6E3FF3] hover:bg-[#5B34CC]">
-                  {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                <Button 
+                  size="sm" 
+                  onClick={() => addNoteMutation.mutate(noteText)} 
+                  disabled={addNoteMutation.isPending || !noteText.trim()} 
+                  className="h-8 gap-1.5 bg-[#6E3FF3] hover:bg-[#5B34CC]"
+                >
+                  {addNoteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   Add note
                 </Button>
               </div>
             </div>
 
             <div>
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
-                Activity History
-              </h3>
+              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Activity History</h3>
               <div className="pl-1">
                 {notes.length === 0 && history.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-                    No activity yet.
-                  </p>
+                  <p className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">No activity yet.</p>
                 ) : (
                   <Timeline notes={notes} history={history} />
                 )}
@@ -394,31 +381,12 @@ export default function LeadDetail() {
 
 function FieldRow({ icon, label, children }: { icon?: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[180px_1fr] items-start gap-8">
-      <dt className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/80 whitespace-nowrap">
+    <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+      <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
         {icon}{label}
       </dt>
       <dd className="min-w-0 flex-1 text-sm font-medium text-foreground">{children}</dd>
     </div>
-  );
-}
-
-function EditableField({
-  value,
-  placeholder,
-  onSave,
-}: { value: string; placeholder?: string; onSave: (v: string) => void | Promise<void> }) {
-  const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
-  return (
-    <input
-      value={v}
-      placeholder={placeholder}
-      onChange={(e) => setV(e.target.value)}
-      onBlur={() => onSave(v)}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-      className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-foreground outline-none transition hover:border-border focus:border-border focus:bg-background"
-    />
   );
 }
 
@@ -440,9 +408,7 @@ function Timeline({ notes, history }: { notes: LeadNote[]; history: StatusHistor
           {item.kind === "note" ? (
             <div className="rounded-lg border border-border bg-card p-3 shadow-soft">
               <p className="whitespace-pre-wrap text-sm text-foreground">{item.data.content}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {format(new Date(item.at), "MMM d, yyyy 'at' h:mm a")}
-              </p>
+              <p className="mt-2 text-xs text-muted-foreground">{format(new Date(item.at), "MMM d, yyyy 'at' h:mm a")}</p>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

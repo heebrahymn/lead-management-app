@@ -54,7 +54,14 @@ export type ManagedUser = {
   email: string;
   full_name?: string;
   roles: string[];
+  created_at?: string;
+  last_sign_in_at?: string | null;
 };
+
+export interface AdminFunctionResponse {
+  users?: ManagedUser[];
+  error?: string;
+}
 
 export interface LeadNote {
   id: string;
@@ -106,3 +113,6 @@ export const STATUS_DOT: Record<LeadStatus, string> = {
   lost: "bg-status-lost-fg",
   closed: "bg-status-closed-fg",
 };
+
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 250] as const;
+export const DEFAULT_PAGE_SIZE = 10;

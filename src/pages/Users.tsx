@@ -11,15 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, ShieldAlert, UserPlus, Pencil, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { ManagedUser, AdminFunctionResponse } from "@/lib/leads";
 
-type ManagedUser = {
-  id: string;
-  email: string;
-  full_name: string;
-  created_at: string;
-  last_sign_in_at: string | null;
-  roles: string[];
-};
+type UserRole = "standard" | "superadmin";
 
 export default function Users() {
   const { isSuperadmin, loading: rolesLoading } = useRoles();
@@ -30,7 +24,7 @@ export default function Users() {
   const [newUserName, setNewUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"standard" | "superadmin">("standard");
+  const [role, setRole] = useState<UserRole>("standard");
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   
   const generatePassword = () => {
@@ -41,7 +35,7 @@ export default function Users() {
     }
     setPassword(retVal);
   };
-  const [editRole, setEditRole] = useState<"standard" | "superadmin">("standard");
+  const [editRole, setEditRole] = useState<UserRole>("standard");
   const [editPassword, setEditPassword] = useState("");
   const [updating, setUpdating] = useState(false);
 
@@ -51,7 +45,7 @@ export default function Users() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+    const { data, error } = await supabase.functions.invoke<AdminFunctionResponse>("admin-create-user", {
       body: { action: "list" },
     });
     if (error) toast.error(error.message);
@@ -66,7 +60,7 @@ export default function Users() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
-    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+    const { data, error } = await supabase.functions.invoke<AdminFunctionResponse>("admin-create-user", {
       body: { action: "create", email, password, role, full_name: newUserName },
     });
     setCreating(false);
@@ -85,7 +79,7 @@ export default function Users() {
 
   const remove = async (id: string, userEmail: string) => {
     if (!confirm(`Delete ${userEmail}? They will lose access immediately.`)) return;
-    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+    const { data, error } = await supabase.functions.invoke<AdminFunctionResponse>("admin-create-user", {
       body: { action: "delete", user_id: id },
     });
     if (error || data?.error) {
@@ -100,7 +94,7 @@ export default function Users() {
     e.preventDefault();
     if (!editingUser) return;
     setUpdating(true);
-    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+    const { data, error } = await supabase.functions.invoke<AdminFunctionResponse>("admin-create-user", {
       body: { 
         action: "update", 
         user_id: editingUser.id, 
@@ -218,7 +212,7 @@ export default function Users() {
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as any)}>
+                <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="standard">Standard user</SelectItem>
@@ -286,7 +280,7 @@ export default function Users() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(u.created_at), "MMM d, yyyy")}
+                    {u.created_at ? format(new Date(u.created_at), "MMM d, yyyy") : "—"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {u.last_sign_in_at
@@ -300,7 +294,7 @@ export default function Users() {
                         size="icon"
                         onClick={() => {
                           setEditingUser(u);
-                          setEditRole((u.roles[0] as any) || "standard");
+                          setEditRole((u.roles[0] as UserRole) || "standard");
                           setEditPassword("");
                         }}
                         aria-label="Edit user"
@@ -343,7 +337,7 @@ export default function Users() {
           </div>
           <div className="space-y-2">
             <Label>Role</Label>
-            <Select value={editRole} onValueChange={(v) => setEditRole(v as any)}>
+            <Select value={editRole} onValueChange={(v) => setEditRole(v as UserRole)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="standard">Standard user</SelectItem>

@@ -1,141 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, MessageCircle, Users, Clock, Send, Calendar } from "lucide-react";
-import { fetchWhatsAppMessages, calculateWhatsAppAnalytics, WhatsAppMessage, PeriodFilter } from "@/lib/wati";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Legend,
-} from "recharts";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, MessageCircle, Users, Clock, Send, Calendar, RefreshCcw } from "lucide-react";
+import { fetchWhatsAppMessages, calculateWhatsAppAnalytics } from "@/lib/wati";
+import { useDateFilter, PresetKey } from "@/hooks/useDateFilter";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function WhatsAppAnalytics() {
-  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Single Global Filter for all sections
+  const globalFilter = useDateFilter('7');
 
-  const fetchData = async () => {
-    try {
-      const data = await fetchWhatsAppMessages(2000);
-      setMessages(data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const { data: messages = [], isLoading, isRefetching, refetch } = useQuery({
+    queryKey: ["whatsapp-messages"],
+    queryFn: () => fetchWhatsAppMessages(5000),
+  });
 
   useEffect(() => {
     document.title = "WhatsApp Analytics — Leadly CRM";
-    fetchData();
   }, []);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
+  // Calculate all stats based on the single global filter
+  const stats = calculateWhatsAppAnalytics(messages, globalFilter.filter);
 
-  // Period filter state
-  type PresetKey = '7' | '14' | '30' | 'custom';
-  const [preset, setPreset] = useState<PresetKey>('30');
-  const [customStart, setCustomStart] = useState<string>('');
-  const [customEnd, setCustomEnd] = useState<string>('');
+  const periodLabel = globalFilter.preset === 'custom'
+    ? (globalFilter.customStart && globalFilter.customEnd ? `${globalFilter.customStart} → ${globalFilter.customEnd}` : 'Custom range')
+    : `Current ${globalFilter.preset} days vs. previous ${globalFilter.preset} days`;
 
-  // Timing section local filter
-  const [timingPreset, setTimingPreset] = useState<PresetKey>('30');
-  const [timingCustomStart, setTimingCustomStart] = useState<string>('');
-  const [timingCustomEnd, setTimingCustomEnd] = useState<string>('');
-
-  // Agent Performance section local filter
-  const [agentPreset, setAgentPreset] = useState<PresetKey>('30');
-  const [agentCustomStart, setAgentCustomStart] = useState<string>('');
-  const [agentCustomEnd, setAgentCustomEnd] = useState<string>('');
-
-  // Response Time section local filter
-  const [responsePreset, setResponsePreset] = useState<PresetKey>('30');
-  const [responseCustomStart, setResponseCustomStart] = useState<string>('');
-  const [responseCustomEnd, setResponseCustomEnd] = useState<string>('');
-
-  const filter = useMemo((): PeriodFilter | undefined => {
-    const now = new Date();
-    if (preset === 'custom') {
-      if (!customStart || !customEnd) return undefined; // fall back to 30-day default
-      return {
-        currentStart: new Date(customStart),
-        currentEnd: new Date(customEnd + 'T23:59:59'),
-      };
-    }
-    const days = parseInt(preset, 10);
-    return {
-      currentStart: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
-      currentEnd: now,
-    };
-  }, [preset, customStart, customEnd]);
-
-  const timingFilter = useMemo((): PeriodFilter | undefined => {
-    const now = new Date();
-    if (timingPreset === 'custom') {
-      if (!timingCustomStart || !timingCustomEnd) return undefined;
-      return {
-        currentStart: new Date(timingCustomStart),
-        currentEnd: new Date(timingCustomEnd + 'T23:59:59'),
-      };
-    }
-    const days = parseInt(timingPreset, 10);
-    return {
-      currentStart: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
-      currentEnd: now,
-    };
-  }, [timingPreset, timingCustomStart, timingCustomEnd]);
-
-  const agentFilter = useMemo((): PeriodFilter | undefined => {
-    const now = new Date();
-    if (agentPreset === 'custom') {
-      if (!agentCustomStart || !agentCustomEnd) return undefined;
-      return {
-        currentStart: new Date(agentCustomStart),
-        currentEnd: new Date(agentCustomEnd + 'T23:59:59'),
-      };
-    }
-    const days = parseInt(agentPreset, 10);
-    return {
-      currentStart: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
-      currentEnd: now,
-    };
-  }, [agentPreset, agentCustomStart, agentCustomEnd]);
-
-  const responseFilter = useMemo((): PeriodFilter | undefined => {
-    const now = new Date();
-    if (responsePreset === 'custom') {
-      if (!responseCustomStart || !responseCustomEnd) return undefined;
-      return {
-        currentStart: new Date(responseCustomStart),
-        currentEnd: new Date(responseCustomEnd + 'T23:59:59'),
-      };
-    }
-    const days = parseInt(responsePreset, 10);
-    return {
-      currentStart: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
-      currentEnd: now,
-    };
-  }, [responsePreset, responseCustomStart, responseCustomEnd]);
-
-  // We need to calculate stats separately if we want local filtering
-  const stats = calculateWhatsAppAnalytics(messages, filter);
-  const timingStats = calculateWhatsAppAnalytics(messages, timingFilter);
-  const agentStats = calculateWhatsAppAnalytics(messages, agentFilter);
-  const responseStats = calculateWhatsAppAnalytics(messages, responseFilter);
-
-  const periodLabel = preset === 'custom'
-    ? (customStart && customEnd ? `${customStart} → ${customEnd}` : 'Custom range')
-    : `Current ${preset} days vs. previous ${preset} days`;
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -145,23 +36,72 @@ export default function WhatsAppAnalytics() {
 
   return (
     <div className="p-4 sm:p-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">WhatsApp Analytics</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1E293B]">WhatsApp Analytics</h1>
           <p className="text-muted-foreground mt-1 text-sm">Real-time performance and message tracking directly from webhooks</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className={cn(
-            "flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/50 disabled:opacity-50",
-            refreshing && "cursor-not-allowed"
-          )}
-        >
-          <Loader2 className={cn("h-4 w-4", refreshing && "animate-spin")} />
-          {refreshing ? "Refreshing..." : "Refresh Data"}
-        </button>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Global Date Filter UI */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-sm">
+            {(['7', '14'] as PresetKey[]).map(d => (
+              <Button
+                key={d}
+                variant={globalFilter.preset === d ? "default" : "ghost"}
+                size="sm"
+                className="h-8 text-xs px-3"
+                onClick={() => globalFilter.setPreset(d)}
+              >
+                Last {d} days
+              </Button>
+            ))}
+            <Button
+              variant={globalFilter.preset === 'custom' ? "default" : "ghost"}
+              size="sm"
+              className="h-8 text-xs px-3 gap-1.5"
+              onClick={() => globalFilter.setPreset('custom')}
+            >
+              <Calendar className="h-3.5 w-3.5" /> Custom
+            </Button>
+          </div>
+
+          <Button
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2"
+          >
+            <RefreshCcw className={cn("h-3.5 w-3.5", isRefetching && "animate-spin")} />
+            {isRefetching ? "Refreshing..." : "Refresh Data"}
+          </Button>
+        </div>
       </div>
+
+      {/* Custom Date Range Picker */}
+      {globalFilter.preset === 'custom' && (
+        <div className="mb-8 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-sm">
+            <label className="font-semibold text-muted-foreground">From</label>
+            <input 
+              type="date" 
+              value={globalFilter.customStart} 
+              onChange={e => globalFilter.setCustomStart(e.target.value)} 
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <label className="font-semibold text-muted-foreground">To</label>
+            <input 
+              type="date" 
+              value={globalFilter.customEnd} 
+              onChange={e => globalFilter.setCustomEnd(e.target.value)} 
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+            />
+          </div>
+        </div>
+      )}
 
       {/* KPI Row */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -188,199 +128,21 @@ export default function WhatsAppAnalytics() {
       </div>
 
       {/* Working Hours Analysis */}
-      <div className="mb-8">
-        <h2 className="mb-4 text-lg font-bold tracking-tight text-[#1E293B]">Working Hours Response Analysis</h2>
+      <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="mb-5 text-lg font-bold tracking-tight text-[#1E293B]">Working Hours Response Analysis</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Chats in Working Hours"
-            value={stats.workingHours.chatsInWorkingHours}
-          />
-          <StatCard
-            title="In-hours Median"
-            value={`${stats.workingHours.inHoursMedian} m`}
-          />
-          <StatCard
-            title="Out-of-hours Arrivals"
-            value={stats.workingHours.outOfHoursArrivals}
-          />
-          <StatCard
-            title="In-hours, No Reply"
-            value={stats.workingHours.inHoursNoReply}
-          />
-        </div>
-      </div>
-
-      {/* Agent Performance Table */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-soft">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">Agent Performance (Working Hours)</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Performance metrics ({agentPreset === 'custom' ? 'Custom' : `last ${agentPreset} days`})
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {(['7', '30'] as const).map(d => (
-              <button
-                key={d}
-                onClick={() => setAgentPreset(d)}
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  agentPreset === d
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-                )}
-              >
-                Last {d} days
-              </button>
-            ))}
-            <button
-              onClick={() => setAgentPreset('custom')}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                agentPreset === 'custom'
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-              )}
-            >
-              <Calendar className="h-3 w-3" />
-              Custom
-            </button>
-          </div>
-        </div>
-
-        {agentPreset === 'custom' && (
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">From</label>
-              <input
-                type="date"
-                value={agentCustomStart}
-                onChange={e => setAgentCustomStart(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">To</label>
-              <input
-                type="date"
-                value={agentCustomEnd}
-                onChange={e => setAgentCustomEnd(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="pb-3 font-semibold">Agent</th>
-                <th className="pb-3 font-semibold">Msgs Sent</th>
-                <th className="pb-3 font-semibold text-center">Avg Resp (m)</th>
-                <th className="pb-3 font-semibold text-center">Chats</th>
-                <th className="pb-3 font-semibold text-right">Assessment</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {agentStats.agentPerformance.length > 0 ? (
-                agentStats.agentPerformance.map((row, idx) => (
-                  <tr key={idx} className="group">
-                    <td className="py-4 font-medium text-[#1E293B]">{row.agent}</td>
-                    <td className="py-4 text-muted-foreground">{row.msgsSent}</td>
-                    <td className="py-4 text-center font-semibold text-[#1E293B]">{row.avg}</td>
-                    <td className="py-4 text-center text-muted-foreground">{row.chats}</td>
-                    <td className="py-4 text-right">
-                      <span className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-bold",
-                        row.assessment === "Top Tier" ? "bg-green-100 text-green-700" :
-                        row.assessment === "Good" ? "bg-blue-100 text-blue-700" :
-                        row.assessment === "Need Improvement" ? "bg-red-100 text-red-700" :
-                        "bg-gray-100 text-gray-700"
-                      )}>
-                        {row.assessment}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No agent data for this period.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <StatCard title="Chats in Working Hours" value={stats.workingHours.chatsInWorkingHours} />
+          <StatCard title="In-hours Median" value={`${stats.workingHours.inHoursMedian} m`} />
+          <StatCard title="Out-of-hours Arrivals" value={stats.workingHours.outOfHoursArrivals} />
+          <StatCard title="In-hours, No Reply" value={stats.workingHours.inHoursNoReply} />
         </div>
       </div>
 
       {/* Period-on-Period Comparison */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-soft">
-        {/* Header + Filters */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">Period-on-Period Comparison</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{periodLabel}</p>
-          </div>
-
-          {/* Preset buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            {(['7', '14', '30'] as const).map(d => (
-              <button
-                key={d}
-                onClick={() => setPreset(d)}
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  preset === d
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-                )}
-              >
-                Last {d} days
-              </button>
-            ))}
-            <button
-              onClick={() => setPreset('custom')}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                preset === 'custom'
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-              )}
-            >
-              <Calendar className="h-3 w-3" />
-              Custom
-            </button>
-          </div>
-        </div>
-
-        {/* Custom date range inputs */}
-        {preset === 'custom' && (
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">From</label>
-              <input
-                type="date"
-                value={customStart}
-                onChange={e => setCustomStart(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">To</label>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={e => setCustomEnd(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        )}
-        
+      <AnalyticsSection 
+        title="Period-on-Period Comparison" 
+        description={periodLabel}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -412,71 +174,82 @@ export default function WhatsAppAnalytics() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AnalyticsSection>
+
+      {/* Agent Response time Table */}
+      <AnalyticsSection 
+        title="Agent Response time (Working Hours)" 
+        description="Performance metrics for the selected period"
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="pb-3 font-semibold">Agent</th>
+                <th className="pb-3 font-semibold">Msgs Sent</th>
+                <th className="pb-3 font-semibold text-center">Chats</th>
+                <th className="pb-3 font-semibold text-center whitespace-nowrap">≤ 5m</th>
+                <th className="pb-3 font-semibold text-center whitespace-nowrap">5-15m</th>
+                <th className="pb-3 font-semibold text-center whitespace-nowrap">15-30m</th>
+                <th className="pb-3 font-semibold text-center whitespace-nowrap">30-60m</th>
+                <th className="pb-3 font-semibold text-center whitespace-nowrap">&gt; 60m</th>
+                <th className="pb-3 font-semibold text-right">Assessment</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {stats.agentPerformance.length > 0 ? (
+                stats.agentPerformance.map((row, idx) => (
+                  <tr key={idx} className="group hover:bg-muted/30 transition-colors">
+                    <td className="py-4 font-medium text-[#1E293B]">{row.agent}</td>
+                    <td className="py-4 text-muted-foreground">{row.msgsSent}</td>
+                    <td className="py-4 text-center text-muted-foreground">{row.chats}</td>
+                    <td className="py-4 text-center text-muted-foreground">
+                      {row.buckets?.[0] > 0 ? (
+                        <span className="font-bold text-green-600">{row.buckets[0]}</span>
+                      ) : "—"}
+                    </td>
+                    <td className="py-4 text-center text-muted-foreground">
+                      {row.buckets?.[1] > 0 ? row.buckets[1] : "—"}
+                    </td>
+                    <td className="py-4 text-center text-muted-foreground">
+                      {row.buckets?.[2] > 0 ? row.buckets[2] : "—"}
+                    </td>
+                    <td className="py-4 text-center text-muted-foreground">
+                      {row.buckets?.[3] > 0 ? row.buckets[3] : "—"}
+                    </td>
+                    <td className="py-4 text-center text-muted-foreground">
+                      {row.buckets?.[4] > 0 ? (
+                        <span className="font-bold text-red-500">{row.buckets[4]}</span>
+                      ) : "—"}
+                    </td>
+                    <td className="py-4 text-right">
+                      <span className={cn(
+                        "rounded-full px-2.5 py-0.5 text-xs font-bold",
+                        row.assessment === "Top Tier" ? "bg-green-100 text-green-700" :
+                        row.assessment === "Good" ? "bg-blue-100 text-blue-700" :
+                        row.assessment === "Need Improvement" ? "bg-red-100 text-red-700" :
+                        "bg-gray-100 text-gray-700"
+                      )}>
+                        {row.assessment}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={10} className="py-8 text-center text-muted-foreground">No agent data for this period.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </AnalyticsSection>
 
       {/* Chat Volume & Timing */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-soft">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">Chat Volume &amp; Timing</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Message distribution by day of week ({timingPreset === 'custom' ? 'Custom' : `last ${timingPreset} days`})
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {(['7', '30'] as const).map(d => (
-              <button
-                key={d}
-                onClick={() => setTimingPreset(d)}
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  timingPreset === d
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-                )}
-              >
-                Last {d} days
-              </button>
-            ))}
-            <button
-              onClick={() => setTimingPreset('custom')}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                timingPreset === 'custom'
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-              )}
-            >
-              <Calendar className="h-3 w-3" />
-              Custom
-            </button>
-          </div>
-        </div>
-
-        {timingPreset === 'custom' && (
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">From</label>
-              <input
-                type="date"
-                value={timingCustomStart}
-                onChange={e => setTimingCustomStart(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">To</label>
-              <input
-                type="date"
-                value={timingCustomEnd}
-                onChange={e => setTimingCustomEnd(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        )}
-
+      <AnalyticsSection 
+        title="Chat Volume & Timing" 
+        description="Message distribution by day of week"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -488,17 +261,11 @@ export default function WhatsAppAnalytics() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {timingStats.chatVolumeByDay.map((row, i) => (
+              {stats.chatVolumeByDay.map((row, i) => (
                 <tr key={i} className="hover:bg-muted/10">
                   <td className="px-4 py-3.5">
-                    <span className={cn("font-medium", row.isWeekend ? "text-orange-500" : "text-muted-foreground")}>
-                      {row.day}
-                    </span>
-                    {row.isWeekend && (
-                      <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-600">
-                        Weekend
-                      </span>
-                    )}
+                    <span className={cn("font-medium", row.isWeekend ? "text-orange-500" : "text-muted-foreground")}>{row.day}</span>
+                    {row.isWeekend && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-600">Weekend</span>}
                   </td>
                   <td className="px-4 py-3.5 text-right font-medium text-green-600">{row.inbound}</td>
                   <td className="px-4 py-3.5 text-right font-medium text-blue-600">{row.outbound}</td>
@@ -508,71 +275,13 @@ export default function WhatsAppAnalytics() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AnalyticsSection>
 
       {/* Response Time Breakdown */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-soft">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">Response Time Breakdown (All Hours)</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              How quickly your team responds ({responsePreset === 'custom' ? 'Custom' : `last ${responsePreset} days`})
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {(['7', '30'] as const).map(d => (
-              <button
-                key={d}
-                onClick={() => setResponsePreset(d)}
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                  responsePreset === d
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-                )}
-              >
-                Last {d} days
-              </button>
-            ))}
-            <button
-              onClick={() => setResponsePreset('custom')}
-              className={cn(
-                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                responsePreset === 'custom'
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
-              )}
-            >
-              <Calendar className="h-3 w-3" />
-              Custom
-            </button>
-          </div>
-        </div>
-
-        {responsePreset === 'custom' && (
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">From</label>
-              <input
-                type="date"
-                value={responseCustomStart}
-                onChange={e => setResponseCustomStart(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="whitespace-nowrap font-medium text-muted-foreground">To</label>
-              <input
-                type="date"
-                value={responseCustomEnd}
-                onChange={e => setResponseCustomEnd(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-        )}
-
+      <AnalyticsSection 
+        title="Response Time Breakdown (All Hours)" 
+        description="How quickly your team responds"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -584,25 +293,16 @@ export default function WhatsAppAnalytics() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {responseStats.responseTimeBreakdown.map((row, i) => {
+              {stats.responseTimeBreakdown.map((row, i) => {
                 const diff = row.pct - row.prevPct;
-                const changeLabel = row.prevPct === 0
-                  ? (row.pct > 0 ? `+${row.pct}%` : '— 0%')
-                  : (diff > 0 ? `+${diff}%` : diff === 0 ? '— 0%' : `${diff}%`);
-                const isPositive = diff > 0;
-                const isNegative = diff < 0;
+                const changeLabel = row.prevPct === 0 ? (row.pct > 0 ? `+${row.pct}%` : '— 0%') : (diff > 0 ? `+${diff}%` : diff === 0 ? '— 0%' : `${diff}%`);
                 return (
                   <tr key={i} className="hover:bg-muted/10">
                     <td className="px-4 py-3.5 font-medium text-muted-foreground">{row.label}</td>
                     <td className="px-4 py-3.5 text-right font-semibold text-foreground">{row.count}</td>
                     <td className="px-4 py-3.5 text-right font-medium text-foreground">{row.pct}%</td>
                     <td className="px-4 py-3.5 text-right">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        isPositive ? "text-green-600" : isNegative ? "text-red-600" : "text-muted-foreground"
-                      )}>
-                        {changeLabel}
-                      </span>
+                      <span className={cn("text-sm font-medium", diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-muted-foreground")}>{changeLabel}</span>
                     </td>
                   </tr>
                 );
@@ -610,18 +310,33 @@ export default function WhatsAppAnalytics() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AnalyticsSection>
+    </div>
+  );
+}
 
+interface SectionProps {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}
+
+function AnalyticsSection({ title, description, children }: SectionProps) {
+  return (
+    <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="mb-5">
+        <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+      {children}
     </div>
   );
 }
 
 function KpiCard({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-soft transition-all hover:shadow-md">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-        {icon}
-      </div>
+    <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">{icon}</div>
       <div>
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
@@ -632,7 +347,7 @@ function KpiCard({ title, value, icon }: { title: string; value: number | string
 
 function StatCard({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-soft transition-all hover:shadow-md">
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
       <p className="text-[13px] font-medium text-muted-foreground">{title}</p>
       <p className="mt-1 text-3xl font-bold tracking-tight text-[#1E293B]">{value}</p>
     </div>

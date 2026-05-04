@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export const WORKING_HOURS_START = 8;
+export const WORKING_HOURS_END = 18;
+
 export interface WhatsAppMessage {
   id: string;
   wati_message_id: string | null;
@@ -69,7 +72,7 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
 
     if (msg.direction === 'inbound') {
       totalInbound++;
-      const isWorkingHour = !isWeekend && hour >= 9 && hour < 17;
+      const isWorkingHour = !isWeekend && hour >= WORKING_HOURS_START && hour < WORKING_HOURS_END;
       if (isWorkingHour) {
         chatsInWorkingHours++;
         workingHourMsgIds.add(msg.id);
@@ -81,7 +84,13 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     }
   });
 
-  const agentStatsMap: Record<string, { name: string, msgsSent: number, responseTimes: number[], chats: Set<string> }> = {};
+  const agentStatsMap: Record<string, { 
+    name: string, 
+    msgsSent: number, 
+    responseTimes: number[], 
+    chats: Set<string>,
+    buckets: number[] 
+  }> = {};
 
   Object.values(messagesByContact).forEach(contactMessages => {
     contactMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -98,7 +107,13 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
       } else if (msg.direction === 'outbound') {
         const opName = msg.operator_name || 'System / Auto-reply';
         if (!agentStatsMap[opName]) {
-          agentStatsMap[opName] = { name: opName, msgsSent: 0, responseTimes: [], chats: new Set() };
+          agentStatsMap[opName] = { 
+            name: opName, 
+            msgsSent: 0, 
+            responseTimes: [], 
+            chats: new Set(),
+            buckets: [0, 0, 0, 0, 0] // <=5, 5-15, 15-30, 30-60, >60
+          };
         }
         agentStatsMap[opName].msgsSent++;
         agentStatsMap[opName].chats.add(msg.wa_id);
@@ -110,6 +125,13 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
           
           // Attribute response time to agent
           agentStatsMap[opName].responseTimes.push(mins);
+
+          // Categorize into buckets
+          if (mins <= 5) agentStatsMap[opName].buckets[0]++;
+          else if (mins <= 15) agentStatsMap[opName].buckets[1]++;
+          else if (mins <= 30) agentStatsMap[opName].buckets[2]++;
+          else if (mins <= 60) agentStatsMap[opName].buckets[3]++;
+          else agentStatsMap[opName].buckets[4]++;
 
           if (workingHourMsgIds.has(lastInbound.id)) {
             inHoursResponseTimes.push(mins);
@@ -127,14 +149,14 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
 
   const calcMedian = (arr: number[]) => {
     if (arr.length === 0) return 0;
-    arr.sort((a, b) => a - b);
-    const mid = Math.floor(arr.length / 2);
-    return arr.length % 2 !== 0 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2);
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
   };
 
   const totalMessages = totalInbound + totalOutbound;
 
-  // Response time buckets
+  // Global response time buckets
   const bucketLabels = ['<= 5 mins', '5–15 mins', '15–30 mins', '30–60 mins', '> 60 mins'];
   const buckets = [0, 0, 0, 0, 0];
   overallResponseTimes.forEach(mins => {
@@ -186,7 +208,8 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
         median,
         avg,
         chats: agent.chats.size,
-        assessment
+        assessment,
+        buckets: agent.buckets // pass the agent-specific buckets
       };
     }).sort((a, b) => b.msgsSent - a.msgsSent)
   };
@@ -225,7 +248,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     dayVolume[idx] = { day: name, inbound: 0, outbound: 0, isWeekend: WEEKEND_DAYS.has(idx) };
   });
 
-  const timingStart = filter?.currentStart ?? new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
+  const timingStart = filter?.currentStart ?? new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
   const timingEnd = filter?.currentEnd ?? new Date();
 
   messages
@@ -244,10 +267,10 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     total: dayVolume[idx].inbound + dayVolume[idx].outbound,
   }));
 
-  // Period comparison — driven by filter if provided, else defaults to last 30 days
+  // Period comparison
   const now = new Date();
   const periodEnd   = filter?.currentEnd   ?? now;
-  const periodStart = filter?.currentStart ?? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const periodStart = filter?.currentStart ?? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const periodMs    = periodEnd.getTime() - periodStart.getTime();
   const prevEnd     = new Date(periodStart.getTime());
   const prevStart   = new Date(periodStart.getTime() - periodMs);
@@ -263,6 +286,12 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
 
   const currentStats = computePeriodStats(currentPeriodMsgs);
   const previousStats = computePeriodStats(previousPeriodMsgs);
+
+  console.log("Analytics Period Comparison:", {
+    current: { start: periodStart.toISOString(), end: periodEnd.toISOString(), count: currentPeriodMsgs.length },
+    previous: { start: prevStart.toISOString(), end: prevEnd.toISOString(), count: previousPeriodMsgs.length },
+    totalAvailable: messages.length
+  });
 
   const periodDays = Math.round(periodMs / (24 * 60 * 60 * 1000));
 
@@ -283,7 +312,6 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     { metric: "Out-of-hours Arrivals", current: currentStats.outOfHoursArrivals, prev: previousStats.outOfHoursArrivals, change: calcChange(currentStats.outOfHoursArrivals, previousStats.outOfHoursArrivals) },
   ];
 
-  // For the top KPI row and Working hours section, use current stats to reflect recent reality
   return {
     totalInbound: currentStats.totalInbound,
     totalOutbound: currentStats.totalOutbound,
