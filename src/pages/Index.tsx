@@ -4,12 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoles } from "@/hooks/useRole";
+import { useDateFilter, type PresetKey } from "@/hooks/useDateFilter";
 
 import { LeadFormDialog } from "@/components/AddLeadDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { 
   Lead, 
   LeadStatus, 
+  LeadSource,
   STATUSES, 
   SOURCE_LABEL, 
   SOURCES, 
@@ -61,8 +63,15 @@ export default function Index() {
   const [statusFilter, setStatusFilter] = useState<LeadStatus[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [assignFilter, setAssignFilter] = useState<string[]>([]);
+  const [countryFilter, setCountryFilter] = useState("all");
+  const { preset, setPreset, customStart, setCustomStart, customEnd, setCustomEnd, filter: dateFilter } = useDateFilter('7');
   const [sort, setSort] = useState<SortKey>("updated_desc");
   const [page, setPage] = useState(0);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [search, statusFilter, sourceFilter, assignFilter, countryFilter, dateFilter]);
   
   // Persistent page size
   const [pageSize, setPageSize] = useState(() => {
@@ -111,13 +120,51 @@ export default function Index() {
     return map;
   }, [users]);
 
-  // Fetch Leads (Server-side paginated & sorted)
+  // Fetch Leads (Server-side paginated, sorted, and filtered)
   const { data, isLoading: leadsLoading } = useQuery({
-    queryKey: ["leads", page, sort, pageSize],
+    queryKey: ["leads", page, sort, pageSize, search, statusFilter, sourceFilter, assignFilter, countryFilter, dateFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
         .select("*", { count: "exact" });
+
+      // Apply Filters
+      if (search.trim()) {
+        const q = `%${search.trim()}%`;
+        query = query.or(`name.ilike.${q},email.ilike.${q},phone.ilike.${q}`);
+      }
+      
+      if (statusFilter.length > 0) {
+        query = query.in("status", statusFilter);
+      }
+      
+      if (sourceFilter.length > 0) {
+        query = query.in("source", sourceFilter as LeadSource[]);
+      }
+      
+      if (assignFilter.length > 0) {
+        if (assignFilter.includes("unassigned")) {
+          const others = assignFilter.filter(x => x !== "unassigned");
+          if (others.length > 0) {
+            query = query.or(`assigned_to.in.(${others.join(",")}),assigned_to.is.null`);
+          } else {
+            query = query.is("assigned_to", null);
+          }
+        } else {
+          query = query.in("assigned_to", assignFilter);
+        }
+      }
+
+      if (countryFilter !== "all") {
+        const prefix = countryFilter.replace("+", "");
+        // Support both with and without + in DB
+        query = query.or(`phone.ilike.${prefix}%,phone.ilike.+${prefix}%`);
+      }
+
+      if (dateFilter) {
+        query = query.gte('created_at', dateFilter.currentStart.toISOString())
+                     .lte('created_at', dateFilter.currentEnd.toISOString());
+      }
 
       // Apply Sort
       switch (sort) {
@@ -170,22 +217,8 @@ export default function Index() {
     onError: (error) => toast.error(error.message),
   });
 
-  // Local filtering (still useful for UI responsiveness on the current page)
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return leads.filter((l) => {
-      if (statusFilter.length && !statusFilter.includes(l.status)) return false;
-      if (sourceFilter.length && !sourceFilter.includes(l.source ?? "")) return false;
-      if (assignFilter.length && !assignFilter.includes(l.assigned_to ?? "unassigned")) return false;
-      if (!q) return true;
-      return (
-        l.name.toLowerCase().includes(q) ||
-        (l.email ?? "").toLowerCase().includes(q) ||
-        (l.phone ?? "").toLowerCase().includes(q) ||
-        (l.source ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [leads, search, statusFilter, assignFilter, sourceFilter]);
+  // Local filtering is no longer needed as we do it on server now
+  const filtered = leads;
 
   const exportCsv = () => {
     const rows = [
@@ -281,6 +314,22 @@ export default function Index() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Country Filter */}
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="w-[140px]">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <SelectValue placeholder="Country" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Countries</SelectItem>
+                <SelectItem value="+260">🇿🇲 Zambia</SelectItem>
+                <SelectItem value="+234">🇳🇬 Nigeria</SelectItem>
+                <SelectItem value="+265">🇲🇼 Malawi</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Source Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -322,6 +371,40 @@ export default function Index() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Date Filter */}
+            <div className="flex gap-2">
+              <Select value={preset} onValueChange={(val: PresetKey) => setPreset(val)}>
+                <SelectTrigger className="w-[130px]">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder="Period" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 Days</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {preset === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input 
+                    type="date" 
+                    value={customStart} 
+                    onChange={(e) => setCustomStart(e.target.value)} 
+                    className="h-9 w-32 px-2 text-xs" 
+                  />
+                  <span className="text-muted-foreground">-</span>
+                  <Input 
+                    type="date" 
+                    value={customEnd} 
+                    onChange={(e) => setCustomEnd(e.target.value)} 
+                    className="h-9 w-32 px-2 text-xs" 
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
