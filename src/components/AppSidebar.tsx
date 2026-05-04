@@ -54,9 +54,7 @@ export function AppSidebar() {
           {!collapsed ? (
             <img src="/logo.png" alt="Carbon Car Care" className="h-6 w-auto" />
           ) : (
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">
-              C
-            </div>
+            <img src="/logo-square.jpg" alt="C" className="h-7 w-7 rounded-md object-cover" />
           )}
         </div>
       </SidebarHeader>
