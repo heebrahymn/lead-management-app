@@ -24,7 +24,7 @@ export default function Overview() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    document.title = "Overview — Leadly CRM";
+    document.title = "Overview — Carbon Car Care CRM";
   }, []);
 
   const { data: leads = [], isLoading } = useQuery({

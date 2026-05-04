@@ -40,7 +40,7 @@ export default function Users() {
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    document.title = "Users — Leadly CRM";
+    document.title = "Users — Carbon Car Care CRM";
   }, []);
 
   const load = async () => {

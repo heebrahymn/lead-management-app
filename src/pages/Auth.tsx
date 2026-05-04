@@ -51,10 +51,7 @@ export default function Auth() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-card">
-            <span className="text-xl font-bold">L</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Leadly</h1>
+          <img src="/logo.png" alt="Carbon Car Care" className="mx-auto mb-4 h-12 w-auto" />
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to your workspace
           </p>

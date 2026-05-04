@@ -51,11 +51,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <span className="text-sm font-bold">L</span>
-          </div>
-          {!collapsed && (
-            <span className="text-base font-semibold tracking-tight">Leadly</span>
+          {!collapsed ? (
+            <img src="/logo.png" alt="Carbon Car Care" className="h-6 w-auto" />
+          ) : (
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">
+              C
+            </div>
           )}
         </div>
       </SidebarHeader>

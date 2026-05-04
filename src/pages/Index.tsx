@@ -80,7 +80,7 @@ export default function Index() {
   });
 
   useEffect(() => {
-    document.title = "Leadly — Lead Management";
+    document.title = "Carbon Car Care — Lead Management";
   }, []);
 
   // Real-time subscription

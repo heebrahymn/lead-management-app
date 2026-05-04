@@ -117,7 +117,7 @@ export default function LeadDetail() {
   }, [session, id, queryClient]);
 
   useEffect(() => {
-    document.title = lead ? `${lead.name} — Leadly` : "Lead — Leadly";
+    document.title = lead ? `${lead.name} — Carbon Car Care` : "Lead — Carbon Car Care";
   }, [lead]);
 
   // Mutations

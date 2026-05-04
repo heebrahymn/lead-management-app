@@ -7,7 +7,7 @@ import { LogOut, User, Shield, Palette } from "lucide-react";
 export default function Settings() {
   const { user } = useAuth();
   useEffect(() => {
-    document.title = "Settings — Leadly CRM";
+    document.title = "Settings — Carbon Car Care CRM";
   }, []);
 
   return (

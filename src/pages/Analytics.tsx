@@ -19,7 +19,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = "Analytics — Leadly CRM";
+    document.title = "Analytics — Carbon Car Care CRM";
   }, []);
 
   useEffect(() => {

@@ -16,7 +16,7 @@ export default function WhatsAppAnalytics() {
   });
 
   useEffect(() => {
-    document.title = "WhatsApp Analytics — Leadly CRM";
+    document.title = "WhatsApp Analytics — Carbon Car Care CRM";
   }, []);
 
   // Calculate all stats based on the single global filter
