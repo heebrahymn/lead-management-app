@@ -195,21 +195,33 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
         median = times.length % 2 !== 0 ? times[mid] : Math.round((times[mid - 1] + times[mid]) / 2);
       }
 
-      const avg = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
-
-      let assessment = "Good";
-      if (median <= 5) assessment = "Top Tier";
-      else if (median > 60) assessment = "Need Improvement";
-      else if (times.length < 5) assessment = "Onboarding";
+      let assessment = "Onboarding";
+      let rationale = "Insufficient data (≤ 5 chats)";
+      
+      if (agent.chats.size > 5) {
+        if (median <= 5) {
+          assessment = "Top Tier";
+          rationale = `Fast median response (${median}m)`;
+        } else if (median <= 20) {
+          assessment = "Good";
+          rationale = `Consistent median (${median}m)`;
+        } else if (median <= 60) {
+          assessment = "Average";
+          rationale = `Median response of ${median}m`;
+        } else {
+          assessment = "Need Improvement";
+          rationale = `Slow median response (${median}m)`;
+        }
+      }
 
       return {
         agent: agent.name,
         msgsSent: agent.msgsSent,
-        median,
-        avg,
+        avg: median,
         chats: agent.chats.size,
         assessment,
-        buckets: agent.buckets // pass the agent-specific buckets
+        rationale,
+        buckets: agent.buckets
       };
     }).sort((a, b) => b.msgsSent - a.msgsSent)
   };

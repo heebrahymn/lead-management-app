@@ -194,6 +194,7 @@ export default function WhatsAppAnalytics() {
                 <th className="pb-3 font-semibold text-center whitespace-nowrap">30-60m</th>
                 <th className="pb-3 font-semibold text-center whitespace-nowrap">&gt; 60m</th>
                 <th className="pb-3 font-semibold text-right">Assessment</th>
+                <th className="pb-3 font-semibold text-right">Reason</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -232,6 +233,9 @@ export default function WhatsAppAnalytics() {
                       )}>
                         {row.assessment}
                       </span>
+                    </td>
+                    <td className="py-4 text-right text-xs text-muted-foreground italic">
+                      {row.rationale}
                     </td>
                   </tr>
                 ))
