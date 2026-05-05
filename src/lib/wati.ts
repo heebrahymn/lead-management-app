@@ -239,8 +239,6 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   const operatorStats: Record<string, { operator: string, messagesSent: number }> = {};
 
   messages.forEach(msg => {
-    if (msg.direction === 'inbound' && msg.lead_id) leadsGenerated.add(msg.lead_id);
-
     const dateStr = new Date(msg.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     if (!dailyVolume[dateStr]) dailyVolume[dateStr] = { date: dateStr, inbound: 0, outbound: 0 };
     dailyVolume[dateStr][msg.direction]++;
@@ -252,6 +250,10 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     }
   });
 
+  // Period-specific leads count
+  const timingStart = filter?.currentStart ?? new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const timingEnd = filter?.currentEnd ?? new Date();
+
   // Day-of-week volume
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const WEEKEND_DAYS = new Set([0, 6]); // Sunday=0, Saturday=6
@@ -260,18 +262,15 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     dayVolume[idx] = { day: name, inbound: 0, outbound: 0, isWeekend: WEEKEND_DAYS.has(idx) };
   });
 
-  const timingStart = filter?.currentStart ?? new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
-  const timingEnd = filter?.currentEnd ?? new Date();
-
-  messages
-    .filter(m => {
-      const d = new Date(m.created_at);
-      return d >= timingStart && d <= timingEnd;
-    })
-    .forEach(msg => {
-      const dow = new Date(msg.created_at).getDay();
+  messages.forEach(msg => {
+    const d = new Date(msg.created_at);
+    if (d >= timingStart && d <= timingEnd) {
+      if (msg.direction === 'inbound' && msg.lead_id) leadsGenerated.add(msg.lead_id);
+      
+      const dow = d.getDay();
       dayVolume[dow][msg.direction]++;
-    });
+    }
+  });
 
   // Ordered Mon→Sun (matching screenshot)
   const chatVolumeByDay = [1, 2, 3, 4, 5, 6, 0].map(idx => ({

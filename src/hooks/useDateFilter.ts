@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { PeriodFilter } from "@/lib/wati";
 
-export type PresetKey = '7' | '14' | '30' | 'custom';
+export type PresetKey = '7' | '14' | '30' | 'all' | 'custom';
 
 export function useDateFilter(defaultPreset: PresetKey = '30') {
   const [preset, setPreset] = useState<PresetKey>(defaultPreset);
@@ -9,6 +9,8 @@ export function useDateFilter(defaultPreset: PresetKey = '30') {
   const [customEnd, setCustomEnd] = useState<string>('');
 
   const filter = useMemo((): PeriodFilter | undefined => {
+    if (preset === 'all') return undefined;
+    
     const now = new Date();
     if (preset === 'custom') {
       if (!customStart || !customEnd) return undefined;

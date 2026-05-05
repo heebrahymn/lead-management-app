@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, MessageCircle, Users, Clock, Send, Calendar, RefreshCcw } from "lucide-react";
 import { fetchWhatsAppMessages, calculateWhatsAppAnalytics } from "@/lib/wati";
 import { useDateFilter, PresetKey } from "@/hooks/useDateFilter";
@@ -10,17 +11,44 @@ export default function WhatsAppAnalytics() {
   // Single Global Filter for all sections
   const globalFilter = useDateFilter('7');
 
-  const { data: messages = [], isLoading, isRefetching, refetch } = useQuery({
+  const { data: messages = [], isLoading: messagesLoading, isRefetching, refetch } = useQuery({
     queryKey: ["whatsapp-messages"],
     queryFn: () => fetchWhatsAppMessages(5000),
+  });
+
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+    queryKey: ["leads-for-wa-analytics"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("id, source, created_at");
+      if (error) throw error;
+      return data;
+    },
   });
 
   useEffect(() => {
     document.title = "WhatsApp Analytics — Carbon Car Care CRM";
   }, []);
 
+  const isLoading = messagesLoading || leadsLoading;
+
   // Calculate all stats based on the single global filter
   const stats = calculateWhatsAppAnalytics(messages, globalFilter.filter);
+
+  // Synchronize leads count with main analytics definition
+  const sourcedLeadsCount = leads.filter(l => {
+    const isWaSource = l.source?.toLowerCase().includes("whatsapp") || l.source === "WA";
+    if (!isWaSource) return false;
+    
+    // If 'All time' or no filter yet, just return true based on source
+    if (!globalFilter.filter) return true;
+
+    const createdAt = new Date(l.created_at);
+    const start = globalFilter.filter.currentStart;
+    const end = globalFilter.filter.currentEnd;
+    return createdAt >= start && createdAt <= end;
+  }).length;
 
   const periodLabel = globalFilter.preset === 'custom'
     ? (globalFilter.customStart && globalFilter.customEnd ? `${globalFilter.customStart} → ${globalFilter.customEnd}` : 'Custom range')
@@ -41,7 +69,7 @@ export default function WhatsAppAnalytics() {
           <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">WhatsApp Analytics</h1>
           <p className="text-muted-foreground mt-1 text-sm">Real-time performance and message tracking directly from webhooks</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {/* Global Date Filter UI */}
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-sm">
@@ -84,20 +112,20 @@ export default function WhatsAppAnalytics() {
         <div className="mb-8 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2 text-sm">
             <label className="font-semibold text-muted-foreground">From</label>
-            <input 
-              type="date" 
-              value={globalFilter.customStart} 
-              onChange={e => globalFilter.setCustomStart(e.target.value)} 
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+            <input
+              type="date"
+              value={globalFilter.customStart}
+              onChange={e => globalFilter.setCustomStart(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           <div className="flex items-center gap-2 text-sm">
             <label className="font-semibold text-muted-foreground">To</label>
-            <input 
-              type="date" 
-              value={globalFilter.customEnd} 
-              onChange={e => globalFilter.setCustomEnd(e.target.value)} 
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+            <input
+              type="date"
+              value={globalFilter.customEnd}
+              onChange={e => globalFilter.setCustomEnd(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -122,7 +150,7 @@ export default function WhatsAppAnalytics() {
         />
         <KpiCard
           title="Leads Sourced via WA"
-          value={stats.leadsGeneratedCount}
+          value={sourcedLeadsCount}
           icon={<Clock className="h-4 w-4 text-yellow-500" />}
         />
       </div>
@@ -139,8 +167,8 @@ export default function WhatsAppAnalytics() {
       </div>
 
       {/* Period-on-Period Comparison */}
-      <AnalyticsSection 
-        title="Period-on-Period Comparison" 
+      <AnalyticsSection
+        title="Period-on-Period Comparison"
         description={periodLabel}
       >
         <div className="overflow-x-auto">
@@ -162,9 +190,9 @@ export default function WhatsAppAnalytics() {
                   <td className="px-4 py-3.5 text-right">
                     <span className={cn(
                       "text-sm font-medium",
-                      row.change.startsWith("+") && row.change !== "+0%" ? "text-green-600" : 
-                      row.change.startsWith("-") && row.change !== "- 0%" ? "text-red-600" : 
-                      "text-muted-foreground"
+                      row.change.startsWith("+") && row.change !== "+0%" ? "text-green-600" :
+                        row.change.startsWith("-") && row.change !== "- 0%" ? "text-red-600" :
+                          "text-muted-foreground"
                     )}>
                       {row.change}
                     </span>
@@ -177,8 +205,8 @@ export default function WhatsAppAnalytics() {
       </AnalyticsSection>
 
       {/* Agent Response time Table */}
-      <AnalyticsSection 
-        title="Agent Response time (Working Hours)" 
+      <AnalyticsSection
+        title="Agent Response time (Working Hours)"
         description="Performance metrics for the selected period"
       >
         <div className="overflow-x-auto">
@@ -227,9 +255,9 @@ export default function WhatsAppAnalytics() {
                       <span className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs font-bold",
                         row.assessment === "Top Tier" ? "bg-green-100 text-green-700" :
-                        row.assessment === "Good" ? "bg-blue-100 text-blue-700" :
-                        row.assessment === "Need Improvement" ? "bg-red-100 text-red-700" :
-                        "bg-gray-100 text-gray-700"
+                          row.assessment === "Good" ? "bg-blue-100 text-blue-700" :
+                            row.assessment === "Need Improvement" ? "bg-red-100 text-red-700" :
+                              "bg-gray-100 text-gray-700"
                       )}>
                         {row.assessment}
                       </span>
@@ -250,8 +278,8 @@ export default function WhatsAppAnalytics() {
       </AnalyticsSection>
 
       {/* Chat Volume & Timing */}
-      <AnalyticsSection 
-        title="Chat Volume & Timing" 
+      <AnalyticsSection
+        title="Chat Volume & Timing"
         description="Message distribution by day of week"
       >
         <div className="overflow-x-auto">
@@ -282,8 +310,8 @@ export default function WhatsAppAnalytics() {
       </AnalyticsSection>
 
       {/* Response Time Breakdown */}
-      <AnalyticsSection 
-        title="Response Time Breakdown (All Hours)" 
+      <AnalyticsSection
+        title="Response Time Breakdown (All Hours)"
         description="How quickly your team responds"
       >
         <div className="overflow-x-auto">
