@@ -434,7 +434,7 @@ export default function Index() {
                     className="grid cursor-pointer grid-cols-1 gap-2 px-4 py-3 transition hover:bg-muted/40 sm:grid-cols-12 sm:items-center sm:gap-6"
                   >
                     <div className="col-span-3">
-                      <div className="font-bold text-[#6E3FF3] truncate">{lead.name}</div>
+                      <div className="font-bold text-primary truncate">{lead.name}</div>
                     </div>
                     <div className="col-span-2 text-sm text-muted-foreground truncate">
                       {lead.phone || "—"}
@@ -444,7 +444,7 @@ export default function Index() {
                     </div>
                     <div className="col-span-1">
                       {lead.source && (
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none text-[10px]">
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px]">
                           {SOURCE_LABEL[lead.source] || lead.source}
                         </Badge>
                       )}
