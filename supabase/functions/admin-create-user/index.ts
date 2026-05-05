@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -33,8 +33,17 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const admin = createClient(url, serviceKey);
+    
+    interface AdminActionRequest {
+      action?: string;
+      email?: string;
+      password?: string;
+      role?: string;
+      full_name?: string;
+      user_id?: string;
+    }
 
-    const body = await req.json().catch(() => null);
+    const body = (await req.json().catch(() => ({}))) as AdminActionRequest;
     const action = body?.action ?? "list";
 
     // SECURITY: All actions in this admin function require superadmin role

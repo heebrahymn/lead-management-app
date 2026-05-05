@@ -40,7 +40,11 @@ export async function fetchWhatsAppMessages(limit: number = 10000): Promise<What
 
       if (!data || data.length === 0) break;
       
-      allMessages = [...allMessages, ...data];
+      // Cast the incoming database rows to a compatible type before adding to the array
+      interface DatabaseMessage extends Omit<WhatsAppMessage, 'direction'> {
+        direction: string;
+      }
+      allMessages = [...allMessages, ...(data as unknown as DatabaseMessage[])];
       lastCount = data.length;
       
       // If we got fewer than CHUNK_SIZE, we've reached the end
