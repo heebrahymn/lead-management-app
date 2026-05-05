@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppRole = "superadmin" | "standard";
+export type AppRole = "superadmin" | "operator" | "standard";
 
 export function useRoles() {
   const { user } = useAuth();
@@ -27,5 +27,7 @@ export function useRoles() {
   }, [user]);
 
   const isSuperadmin = !!roles?.includes("superadmin");
-  return { roles, isSuperadmin, loading };
+  const isOperator = !!roles?.includes("operator");
+  const isStandard = !!roles?.includes("standard");
+  return { roles, isSuperadmin, isOperator, isStandard, loading };
 }
