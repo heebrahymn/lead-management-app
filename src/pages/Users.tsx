@@ -13,7 +13,7 @@ import { Loader2, Plus, Trash2, ShieldAlert, UserPlus, Pencil, RefreshCw } from 
 import { format } from "date-fns";
 import { ManagedUser, AdminFunctionResponse } from "@/lib/leads";
 
-type UserRole = "standard" | "superadmin";
+type UserRole = "standard" | "superadmin" | "operator";
 
 export default function Users() {
   const { isSuperadmin, loading: rolesLoading } = useRoles();
@@ -216,6 +216,7 @@ export default function Users() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="standard">Standard user</SelectItem>
+                    <SelectItem value="operator">Operator</SelectItem>
                     <SelectItem value="superadmin">Superadmin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -271,7 +272,7 @@ export default function Users() {
                       u.roles.map((r) => (
                         <Badge
                           key={r}
-                          variant={r === "superadmin" ? "default" : "secondary"}
+                          variant={r === "superadmin" ? "default" : r === "operator" ? "outline" : "secondary"}
                           className="mr-1"
                         >
                           {r}
@@ -341,6 +342,7 @@ export default function Users() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="standard">Standard user</SelectItem>
+                <SelectItem value="operator">Operator</SelectItem>
                 <SelectItem value="superadmin">Superadmin</SelectItem>
               </SelectContent>
             </Select>

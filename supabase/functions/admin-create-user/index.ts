@@ -68,6 +68,11 @@ Deno.serve(async (req) => {
       const role = String(body?.role ?? "standard");
       const fullName = String(body?.full_name ?? "").trim();
 
+      const validRoles = ["superadmin", "standard", "operator"];
+      if (!validRoles.includes(role)) {
+        return json({ error: "Invalid role specified" }, 400);
+      }
+
       const { data: created, error: createErr } =
         await admin.auth.admin.createUser({
           email,

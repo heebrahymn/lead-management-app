@@ -40,9 +40,15 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
   const { user } = useAuth();
-  const { isSuperadmin } = useRoles();
+  const { isSuperadmin, isOperator } = useRoles();
+  
+  // Filter base items for operator
+  const filteredBaseItems = isOperator 
+    ? baseItems.filter(item => ["Overview", "Leads Management", "Lead Analytics"].includes(item.title))
+    : baseItems;
+
   const items: NavItem[] = [
-    ...baseItems,
+    ...filteredBaseItems,
     ...(isSuperadmin ? [usersItem] : []),
     settingsItem,
   ];
