@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, ShieldAlert, UserPlus, Pencil, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { ManagedUser, AdminFunctionResponse } from "@/lib/leads";
 
 type UserRole = "standard" | "superadmin" | "operator";
@@ -272,8 +273,11 @@ export default function Users() {
                       u.roles.map((r) => (
                         <Badge
                           key={r}
-                          variant={r === "superadmin" ? "default" : r === "operator" ? "outline" : "secondary"}
-                          className="mr-1"
+                          variant={r === "superadmin" ? "default" : "secondary"}
+                          className={cn(
+                            "mr-1",
+                            r === "operator" && "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100"
+                          )}
                         >
                           {r}
                         </Badge>

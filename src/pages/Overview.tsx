@@ -67,8 +67,8 @@ export default function Overview() {
   }, [leads]);
 
   const conversionRate = leads.length
-    ? Math.round((counts.converted / leads.length) * 100)
-    : 0;
+    ? ((counts.converted / leads.length) * 100).toFixed(1)
+    : "0";
 
   const trend = useMemo(() => {
     const days = 14;
