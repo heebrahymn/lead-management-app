@@ -19,7 +19,12 @@ export default function WhatsAppAnalytics() {
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ["leads-for-wa-analytics"],
     queryFn: async () => {
-      let allLeads: any[] = [];
+      interface AnalyticsLead {
+        id: string;
+        source: string | null;
+        created_at: string;
+      }
+      let allLeads: AnalyticsLead[] = [];
       const CHUNK_SIZE = 1000;
       
       while (true) {

@@ -48,10 +48,10 @@ export async function fetchWhatsAppMessages(limit: number = 10000): Promise<What
     }
     
     console.log(`Successfully fetched ${allMessages.length} total messages.`);
-    return allMessages;
+    return allMessages as unknown as WhatsAppMessage[];
   } catch (err) {
     console.error("Unexpected error fetching messages:", err);
-    return allMessages;
+    return allMessages as unknown as WhatsAppMessage[];
   }
 }
 
