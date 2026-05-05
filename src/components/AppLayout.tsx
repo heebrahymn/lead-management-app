@@ -29,7 +29,7 @@ export default function AppLayout() {
           <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur">
             <SidebarTrigger />
             <div className="h-5 w-px bg-border" />
-            <span className="text-sm font-medium text-muted-foreground">CRM</span>
+            <img src="/logo.png" alt="Carbon Car Care" className="ml-auto h-6 w-auto pr-2" />
           </header>
           <main className="flex-1">
             <Outlet />

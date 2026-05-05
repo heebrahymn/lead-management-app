@@ -60,14 +60,14 @@
     --shadow-md: 0 8px 30px -4px rgb(32 64 155 / 0.1), 0 4px 12px -4px rgb(32 64 155 / 0.06);
     --shadow-lg: 0 24px 50px -12px rgb(32 64 155 / 0.15);
 
-    --sidebar-background: 220 20% 99%;
-    --sidebar-foreground: 224 20% 26%;
-    --sidebar-primary: 224 66% 37%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 224 66% 96%;
-    --sidebar-accent-foreground: 224 66% 30%;
-    --sidebar-border: 220 13% 94%;
-    --sidebar-ring: 224 66% 37%;
+    --sidebar-background: 224 66% 37%; /* Brand Blue #20419d approx */
+    --sidebar-foreground: 220 20% 98%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 224 66% 37%;
+    --sidebar-accent: 0 0% 100% / 0.1;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 224 66% 32%;
+    --sidebar-ring: 0 0% 100%;
   }
 
   .dark {

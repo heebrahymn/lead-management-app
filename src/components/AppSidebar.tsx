@@ -52,16 +52,16 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-1.5">
           {!collapsed ? (
-            <img src="/logo.png" alt="Carbon Car Care" className="h-6 w-auto" />
+            <img src="/logo-light.png" alt="Carbon Car Care" className="h-8 w-auto" />
           ) : (
-            <img src="/logo-square.jpg" alt="C" className="h-7 w-7 rounded-md object-cover" />
+            <img src="/logo-square.jpg" alt="C" className="h-8 w-8 rounded-md object-cover" />
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/50 font-bold text-[10px] uppercase tracking-widest">Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
@@ -74,18 +74,23 @@ export function AppSidebar() {
                       tooltip={item.title}
                       className={cn(
                         "transition-all duration-300",
-                        active && "bg-primary/5 text-primary shadow-sm"
+                        active && "bg-[#152653] text-[#ffe863] shadow-md"
                       )}
                     >
                       <NavLink 
                         to={item.url} 
                         end={item.end} 
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-lg",
-                          active ? "font-semibold" : "text-muted-foreground/80 hover:text-foreground"
+                          "group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200",
+                          active 
+                            ? "font-bold text-[#ffe863]" 
+                            : "text-white hover:text-[#eacc1b] hover:bg-white/5"
                         )}
                       >
-                        <item.icon className={cn("h-[1.1rem] w-[1.1rem]", active ? "text-primary" : "text-muted-foreground/60")} />
+                        <item.icon className={cn(
+                          "h-[1.1rem] w-[1.1rem] transition-colors duration-200", 
+                          active ? "text-[#ffe863]" : "text-white group-hover:text-[#eacc1b]"
+                        )} />
                         <span className="text-sm tracking-tight">{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
@@ -104,10 +109,10 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex min-w-0 flex-1 items-center justify-between gap-1">
-              <span className="truncate text-xs text-sidebar-foreground">{user?.email}</span>
+              <span className="truncate text-xs text-white/80 font-medium">{user?.email}</span>
               <button
                 onClick={() => supabase.auth.signOut()}
-                className="rounded p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                className="rounded p-1 text-white/60 hover:bg-white/10 hover:text-[#eacc1b] transition-colors"
                 aria-label="Sign out"
               >
                 <LogOut className="h-3.5 w-3.5" />
