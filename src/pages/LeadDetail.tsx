@@ -211,7 +211,7 @@ export default function LeadDetail() {
             <input
               defaultValue={lead.name}
               onBlur={(e) => updateMutation.mutate({ name: e.target.value })}
-              className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-3xl font-bold tracking-tight outline-none transition hover:border-border focus:border-border focus:bg-card"
+              className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 -ml-2 text-4xl font-bold tracking-tight outline-none transition hover:border-border focus:border-border focus:bg-card brand-gradient-text"
             />
             <div className="mt-2 flex items-center gap-3">
               <StatusPicker 
@@ -267,7 +267,7 @@ export default function LeadDetail() {
 
         <div className="grid gap-6 lg:grid-cols-12 px-2">
           <aside className="space-y-6 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="premium-card p-6">
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Lead Information</h3>
               <dl className="space-y-4 text-sm">
                 <FieldRow label="Value">
@@ -297,7 +297,7 @@ export default function LeadDetail() {
           </aside>
 
           <aside className="space-y-6 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="premium-card p-6">
               <h3 className="mb-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Vehicle & Service</h3>
               <dl className="space-y-6 text-sm">
                 <FieldRow label="Service">
@@ -309,7 +309,7 @@ export default function LeadDetail() {
               </dl>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="premium-card p-6">
               <h3 className="mb-6 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 <Tag className="h-3.5 w-3.5" /> Tags
               </h3>
@@ -339,7 +339,7 @@ export default function LeadDetail() {
           </aside>
 
           <section className="space-y-6 lg:col-span-4">
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="premium-card p-5">
               <Textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
@@ -350,12 +350,12 @@ export default function LeadDetail() {
               />
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-[10px] text-muted-foreground uppercase font-semibold">⌘ + Enter to save</span>
-                <Button 
-                  size="sm" 
-                  onClick={() => addNoteMutation.mutate(noteText)} 
-                  disabled={addNoteMutation.isPending || !noteText.trim()} 
-                  className="h-8 gap-1.5 bg-[#6E3FF3] hover:bg-[#5B34CC]"
-                >
+                  <Button 
+                    size="sm" 
+                    onClick={() => addNoteMutation.mutate(noteText)} 
+                    disabled={addNoteMutation.isPending || !noteText.trim()} 
+                    className="h-8 gap-1.5"
+                  >
                   {addNoteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   Add note
                 </Button>

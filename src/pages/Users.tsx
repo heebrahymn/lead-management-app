@@ -141,7 +141,7 @@ export default function Users() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+          <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">Users</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Provision and manage team members. Only superadmins can add users.
           </p>
@@ -234,7 +234,7 @@ export default function Users() {
         </Dialog>
       </div>
 
-      <div className="rounded-xl border border-border bg-card shadow-soft">
+      <div className="premium-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
