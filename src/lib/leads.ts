@@ -32,7 +32,7 @@ export interface Lead {
   name: string;
   email: string | null;
   phone: string | null;
-  source: string | null;
+  source: LeadSource | null;
   status: LeadStatus;
   tags: string[];
   assigned_to: string | null;
