@@ -258,7 +258,7 @@ export default function Index() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
+            <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">Leads</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Track every conversation from first contact to close.
             </p>
@@ -417,8 +417,8 @@ export default function Index() {
           <EmptyState hasLeads={totalLeads > 0} onCreated={() => queryClient.invalidateQueries({ queryKey: ["leads"] })} />
         ) : (
           <>
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <div className="hidden grid-cols-12 gap-6 border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 sm:grid">
+            <div className="premium-card overflow-hidden">
+              <div className="hidden grid-cols-12 gap-6 border-b border-border bg-muted/30 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 sm:grid">
                 <div className="col-span-3">Contact</div>
                 <div className="col-span-2">Phone</div>
                 <div className="col-span-2">Status</div>
@@ -431,7 +431,7 @@ export default function Index() {
                   <li
                     key={lead.id}
                     onClick={() => navigate(`/leads/${lead.id}`)}
-                    className="grid cursor-pointer grid-cols-1 gap-2 px-4 py-3 transition hover:bg-muted/40 sm:grid-cols-12 sm:items-center sm:gap-6"
+                    className="grid cursor-pointer grid-cols-1 gap-2 px-6 py-4 transition hover:bg-primary/[0.02] sm:grid-cols-12 sm:items-center sm:gap-6 border-b border-border last:border-0"
                   >
                     <div className="col-span-3">
                       <div className="font-bold text-primary truncate">{lead.name}</div>

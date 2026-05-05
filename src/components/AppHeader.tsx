@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 export function AppHeader() {
   const { user } = useAuth();
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-30 glass-panel !rounded-none !border-x-0 !border-t-0 bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <img src="/logo.png" alt="Carbon Car Care" className="h-8 w-auto" />

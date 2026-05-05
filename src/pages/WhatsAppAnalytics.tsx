@@ -38,7 +38,7 @@ export default function WhatsAppAnalytics() {
     <div className="p-4 sm:p-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1E293B]">WhatsApp Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">WhatsApp Analytics</h1>
           <p className="text-muted-foreground mt-1 text-sm">Real-time performance and message tracking directly from webhooks</p>
         </div>
         
@@ -128,8 +128,8 @@ export default function WhatsAppAnalytics() {
       </div>
 
       {/* Working Hours Analysis */}
-      <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h2 className="mb-5 text-lg font-bold tracking-tight text-[#1E293B]">Working Hours Response Analysis</h2>
+      <div className="mb-8 premium-card p-6">
+        <h2 className="mb-5 text-lg font-bold tracking-tight">Working Hours Response Analysis</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Chats in Working Hours" value={stats.workingHours.chatsInWorkingHours} />
           <StatCard title="In-hours Median" value={`${stats.workingHours.inHoursMedian} m`} />
@@ -327,9 +327,9 @@ interface SectionProps {
 
 function AnalyticsSection({ title, description, children }: SectionProps) {
   return (
-    <div className="mb-8 rounded-xl border border-border bg-card p-5 shadow-sm">
+    <div className="mb-8 premium-card p-6">
       <div className="mb-5">
-        <h2 className="text-lg font-bold tracking-tight text-[#1E293B]">{title}</h2>
+        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
@@ -339,10 +339,10 @@ function AnalyticsSection({ title, description, children }: SectionProps) {
 
 function KpiCard({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">{icon}</div>
+    <div className="flex items-center gap-4 premium-card p-5">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 shadow-sm">{icon}</div>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/80">{title}</p>
         <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
       </div>
     </div>
@@ -351,9 +351,9 @@ function KpiCard({ title, value, icon }: { title: string; value: number | string
 
 function StatCard({ title, value }: { title: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md">
-      <p className="text-[13px] font-medium text-muted-foreground">{title}</p>
-      <p className="mt-1 text-3xl font-bold tracking-tight text-[#1E293B]">{value}</p>
+    <div className="premium-card p-5 bg-muted/20">
+      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/80">{title}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   );
 }

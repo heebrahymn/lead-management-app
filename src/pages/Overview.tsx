@@ -103,7 +103,7 @@ export default function Overview() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+        <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           A snapshot of your pipeline performance.
         </p>
@@ -117,9 +117,9 @@ export default function Overview() {
         <KpiCard icon={TrendingUp} label="Conversion rate" value={`${conversionRate}%`} tint="primary" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Trend chart */}
-        <div className="rounded-xl border border-border bg-card p-5 shadow-soft lg:col-span-2">
+        <div className="premium-card p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">New leads</h2>
@@ -154,7 +154,7 @@ export default function Overview() {
         </div>
 
         {/* Pipeline breakdown */}
-        <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
+        <div className="premium-card p-6">
           <h2 className="text-sm font-semibold">Pipeline</h2>
           <p className="text-xs text-muted-foreground">Leads by status</p>
           {pieData.length === 0 ? (
@@ -199,7 +199,7 @@ export default function Overview() {
       </div>
 
       {/* Recent activity */}
-      <div className="mt-4 rounded-xl border border-border bg-card shadow-soft">
+      <div className="mt-6 premium-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <div>
             <h2 className="text-sm font-semibold">Recent leads</h2>
@@ -258,14 +258,14 @@ function KpiCard({
     amber: "bg-status-no-response-bg text-status-no-response-fg",
   };
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-soft">
+    <div className="premium-card p-5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <div className={cn("flex h-7 w-7 items-center justify-center rounded-md", tintMap[tint])}>
+        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground/80">{label}</span>
+        <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shadow-sm", tintMap[tint])}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight">{value}</div>
+      <div className="mt-3 text-3xl font-bold tracking-tight">{value}</div>
     </div>
   );
 }
