@@ -1,10 +1,14 @@
 -- Harden the user_details view to resolve Supabase Advisor security warnings
--- 1. Drop the existing insecure view
+-- while maintaining functionality for the admin edge function.
+
+-- 1. Drop the existing view
 DROP VIEW IF EXISTS public.user_details;
 
--- 2. Recreate as SECURITY INVOKER (the secure default in Postgres 15+)
--- This ensures the view respects the permissions of the person querying it.
-CREATE VIEW public.user_details AS
+-- 2. Recreate as SECURITY DEFINER
+-- This is necessary to access auth.users from the public schema in Supabase.
+CREATE OR REPLACE VIEW public.user_details 
+WITH (security_invoker = false)
+AS
 SELECT 
   u.id,
   u.email,
@@ -20,15 +24,10 @@ LEFT JOIN public.profiles p ON u.id = p.id
 LEFT JOIN public.user_roles ur ON u.id = ur.user_id
 GROUP BY u.id, u.email, u.created_at, u.last_sign_in_at, p.full_name;
 
--- 3. Explicitly revoke all permissions to start from a clean slate
+-- 3. STRICT SECURITY: Revoke all public/authenticated access
 REVOKE ALL ON public.user_details FROM PUBLIC;
 REVOKE ALL ON public.user_details FROM anon;
 REVOKE ALL ON public.user_details FROM authenticated;
 
--- 4. Grant SELECT only to service_role (for Edge Functions) 
--- and authenticated users (who will still be limited by their own permissions)
+-- 4. ONLY grant SELECT to service_role (for administrative Edge Functions)
 GRANT SELECT ON public.user_details TO service_role;
-GRANT SELECT ON public.user_details TO authenticated;
-
--- NOTE: Because this is now a SECURITY INVOKER view, authenticated users 
--- will only see data if they have permission to view the underlying tables.
