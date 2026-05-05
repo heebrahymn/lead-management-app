@@ -34,7 +34,7 @@ export default function LeadDetail() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  const { isSuperadmin, isStandard, isOperator } = useRoles();
+  const { isSuperadmin } = useRoles();
   
   const [noteText, setNoteText] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -152,7 +152,7 @@ export default function LeadDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (isOperator || (!isSuperadmin && !isStandard)) {
+      if (!isSuperadmin) {
         throw new Error("You don't have permission to delete");
       }
       const { error } = await supabase.from("leads").delete().eq("id", id);
@@ -225,7 +225,7 @@ export default function LeadDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {((isSuperadmin || isStandard) && !isOperator) && (
+            {isSuperadmin && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-destructive">

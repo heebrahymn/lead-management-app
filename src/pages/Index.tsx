@@ -470,7 +470,7 @@ export default function Index() {
                           </button>
                         }
                       />
-                      {((isSuperadmin || isStandard) && !isOperator) && (
+                      {isSuperadmin && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <button className="hover:text-destructive transition-colors" onClick={(e) => e.stopPropagation()}>
