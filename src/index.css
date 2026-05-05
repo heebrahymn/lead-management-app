@@ -9,10 +9,10 @@
     --background: 220 20% 98.5%;
     --foreground: 222 25% 12%;
 
-    --card: 0 0% 100%;
+    --card: 220 20% 99.4%; /* Modern Ice White */
     --card-foreground: 222 25% 12%;
 
-    --popover: 0 0% 100%;
+    --popover: 220 20% 99.4%;
     --popover-foreground: 222 25% 12%;
 
     --primary: 224 66% 37%; /* Brand Blue #20409b */
@@ -156,7 +156,8 @@
   }
 
   .premium-card {
-    @apply bg-card rounded-[1.25rem] border border-border/40 shadow-card transition-all duration-500 hover:shadow-lg hover:border-primary/10;
+    @apply rounded-[1.25rem] border border-border/40 shadow-card transition-all duration-500 hover:shadow-lg hover:border-primary/10;
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsla(220, 20%, 98.5%, 0.5) 100%);
   }
 
   .nav-item-active {
