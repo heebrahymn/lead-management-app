@@ -38,7 +38,8 @@ export default function WhatsAppAnalytics() {
 
   // Synchronize leads count with main analytics definition
   const sourcedLeadsCount = leads.filter(l => {
-    const isWaSource = l.source?.toLowerCase().includes("whatsapp") || l.source === "WA";
+    const source = l.source as string | null;
+    const isWaSource = source?.toLowerCase().includes("whatsapp") || source === "WA";
     if (!isWaSource) return false;
     
     // If 'All time' or no filter yet, just return true based on source
