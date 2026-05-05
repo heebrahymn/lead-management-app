@@ -68,10 +68,25 @@ export function AppSidebar() {
                 const active = item.end ? pathname === item.url : pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <NavLink to={item.url} end={item.end} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={active} 
+                      tooltip={item.title}
+                      className={cn(
+                        "transition-all duration-300",
+                        active && "bg-primary/5 text-primary shadow-sm"
+                      )}
+                    >
+                      <NavLink 
+                        to={item.url} 
+                        end={item.end} 
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg",
+                          active ? "font-semibold" : "text-muted-foreground/80 hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className={cn("h-[1.1rem] w-[1.1rem]", active ? "text-primary" : "text-muted-foreground/60")} />
+                        <span className="text-sm tracking-tight">{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

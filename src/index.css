@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -35,7 +35,7 @@
     --input: 220 15% 91%;
     --ring: 224 66% 37%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
     /* Status tokens (soft bg + strong fg) aligned with brand */
     --status-new-bg: 212 95% 94%;
@@ -57,8 +57,8 @@
     --status-closed-fg: 222 20% 22%;
 
     --shadow-sm: 0 1px 2px 0 rgb(32 64 155 / 0.05);
-    --shadow-md: 0 4px 20px -2px rgb(32 64 155 / 0.08), 0 2px 8px -2px rgb(32 64 155 / 0.04);
-    --shadow-lg: 0 20px 40px -12px rgb(32 64 155 / 0.12);
+    --shadow-md: 0 8px 30px -4px rgb(32 64 155 / 0.1), 0 4px 12px -4px rgb(32 64 155 / 0.06);
+    --shadow-lg: 0 24px 50px -12px rgb(32 64 155 / 0.15);
 
     --sidebar-background: 220 20% 99%;
     --sidebar-foreground: 224 20% 26%;
@@ -96,20 +96,38 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-none;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
     font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     background-image: 
-      radial-gradient(at 0% 0%, hsla(224, 66%, 37%, 0.03) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(147, 100%, 30%, 0.02) 0, transparent 50%);
+      radial-gradient(at 0% 0%, hsla(224, 66%, 37%, 0.04) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(147, 100%, 30%, 0.03) 0, transparent 50%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4 {
-    @apply tracking-tight font-semibold;
-    letter-spacing: -0.03em;
+    @apply tracking-tight font-bold;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.04em;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply relative overflow-hidden bg-primary text-primary-foreground shadow-md transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:opacity-50;
+    background: linear-gradient(135deg, #20409b 0%, #1a3480 100%);
+  }
+
+  .btn-primary::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  }
+
+  .btn-primary:hover::after {
+    @apply opacity-100;
   }
 }
 
@@ -119,11 +137,11 @@
   .shadow-pop { box-shadow: var(--shadow-lg); }
 
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-soft;
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-soft;
   }
 
   .dark .glass-panel {
-    @apply bg-slate-950/70 backdrop-blur-md border-white/5;
+    @apply bg-slate-950/70 backdrop-blur-xl border-white/5;
   }
 
   .brand-gradient {
@@ -138,6 +156,11 @@
   }
 
   .premium-card {
-    @apply bg-card rounded-2xl border border-border/50 shadow-card transition-all duration-300 hover:shadow-pop hover:-translate-y-0.5;
+    @apply bg-card rounded-[1.25rem] border border-border/40 shadow-card transition-all duration-500 hover:shadow-lg hover:border-primary/10;
+  }
+
+  .nav-item-active {
+    @apply bg-primary/10 text-primary font-semibold;
+    box-shadow: inset 4px 0 0 0 theme('colors.primary.DEFAULT');
   }
 }

@@ -160,7 +160,7 @@ export function LeadFormDialog({ lead, onSuccess, trigger }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button className="gap-2">
+          <Button className="btn-primary gap-2">
             <Plus className="h-4 w-4" />
             {isEdit ? "Edit Lead" : "Add Lead"}
           </Button>
@@ -364,7 +364,7 @@ export function LeadFormDialog({ lead, onSuccess, trigger }: Props) {
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-[#6E3FF3] hover:bg-[#5B34CC]">
+            <Button type="submit" disabled={loading} className="btn-primary min-w-[120px]">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? "Save Changes" : "Create Lead"}
             </Button>

@@ -418,7 +418,7 @@ export default function Index() {
         ) : (
           <>
             <div className="premium-card overflow-hidden">
-              <div className="hidden grid-cols-12 gap-6 border-b border-border bg-muted/30 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 sm:grid">
+              <div className="hidden grid-cols-12 gap-6 border-b border-border bg-gradient-to-r from-muted/50 to-muted/20 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/90 sm:grid">
                 <div className="col-span-3">Contact</div>
                 <div className="col-span-2">Phone</div>
                 <div className="col-span-2">Status</div>
