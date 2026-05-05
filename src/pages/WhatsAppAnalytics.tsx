@@ -13,17 +13,28 @@ export default function WhatsAppAnalytics() {
 
   const { data: messages = [], isLoading: messagesLoading, isRefetching, refetch } = useQuery({
     queryKey: ["whatsapp-messages"],
-    queryFn: () => fetchWhatsAppMessages(5000),
+    queryFn: () => fetchWhatsAppMessages(10000),
   });
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ["leads-for-wa-analytics"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("id, source, created_at");
-      if (error) throw error;
-      return data;
+      let allLeads: any[] = [];
+      const CHUNK_SIZE = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from("leads")
+          .select("id, source, created_at")
+          .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
+        
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allLeads = [...allLeads, ...data];
+        if (data.length < CHUNK_SIZE) break;
+      }
+      return allLeads;
     },
   });
 

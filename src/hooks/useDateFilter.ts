@@ -15,13 +15,15 @@ export function useDateFilter(defaultPreset: PresetKey = '30') {
     if (preset === 'custom') {
       if (!customStart || !customEnd) return undefined;
       return {
-        currentStart: new Date(customStart + 'T00:00:00'),
-        currentEnd: new Date(customEnd + 'T23:59:59'),
+        currentStart: new Date(customStart + 'T00:00:00Z'),
+        currentEnd: new Date(customEnd + 'T23:59:59Z'),
       };
     }
     const days = parseInt(preset, 10);
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
     return {
-      currentStart: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
+      currentStart: new Date(start.getTime() - days * 24 * 60 * 60 * 1000),
       currentEnd: now,
     };
   }, [preset, customStart, customEnd]);

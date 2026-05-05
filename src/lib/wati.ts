@@ -18,25 +18,41 @@ export interface WhatsAppMessage {
   updated_at: string;
 }
 
-export async function fetchWhatsAppMessages(limit: number = 1000): Promise<WhatsAppMessage[]> {
-  console.log("Fetching messages from Supabase...", { limit });
-  const { data, error } = await supabase
-    .from('whatsapp_messages')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Supabase Error (whatsapp_messages):", error);
-    return [];
-  }
-
-  console.log("Supabase Success:", { 
-    count: data?.length || 0,
-    first: data?.[0] ? { id: data[0].id, created_at: data[0].created_at } : null
-  });
+export async function fetchWhatsAppMessages(limit: number = 10000): Promise<WhatsAppMessage[]> {
+  console.log("Fetching messages from Supabase (paginated)...", { limit });
   
-  return (data || []) as unknown as WhatsAppMessage[];
+  let allMessages: WhatsAppMessage[] = [];
+  let lastCount = 0;
+  const CHUNK_SIZE = 1000;
+
+  try {
+    while (allMessages.length < limit) {
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(allMessages.length, allMessages.length + CHUNK_SIZE - 1);
+
+      if (error) {
+        console.error("Supabase Error (whatsapp_messages):", error);
+        break;
+      }
+
+      if (!data || data.length === 0) break;
+      
+      allMessages = [...allMessages, ...data];
+      lastCount = data.length;
+      
+      // If we got fewer than CHUNK_SIZE, we've reached the end
+      if (lastCount < CHUNK_SIZE) break;
+    }
+    
+    console.log(`Successfully fetched ${allMessages.length} total messages.`);
+    return allMessages;
+  } catch (err) {
+    console.error("Unexpected error fetching messages:", err);
+    return allMessages;
+  }
 }
 
 export function computePeriodStats(messages: WhatsAppMessage[]) {
@@ -239,11 +255,18 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   const operatorStats: Record<string, { operator: string, messagesSent: number }> = {};
 
   messages.forEach(msg => {
-    const dateStr = new Date(msg.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const d = new Date(msg.created_at);
+    const dateStr = d.getUTCDate() + ' ' + d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
     if (!dailyVolume[dateStr]) dailyVolume[dateStr] = { date: dateStr, inbound: 0, outbound: 0 };
-    dailyVolume[dateStr][msg.direction]++;
+    
+    const dir = (msg.direction || '').toLowerCase();
+    const isInbound = dir.includes('inbound') || dir.includes('received');
+    const isOutbound = dir.includes('outbound') || dir.includes('sent');
 
-    if (msg.direction === 'outbound') {
+    if (isInbound) dailyVolume[dateStr].inbound++;
+    if (isOutbound) dailyVolume[dateStr].outbound++;
+
+    if (isOutbound) {
       const op = msg.operator_name || 'System / Auto-reply';
       if (!operatorStats[op]) operatorStats[op] = { operator: op, messagesSent: 0 };
       operatorStats[op].messagesSent++;
@@ -251,7 +274,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   });
 
   // Period-specific leads count
-  const timingStart = filter?.currentStart ?? new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+  const timingStart = filter?.currentStart ?? new Date(0); // Default to epoch for 'All time'
   const timingEnd = filter?.currentEnd ?? new Date();
 
   // Day-of-week volume
@@ -265,10 +288,15 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   messages.forEach(msg => {
     const d = new Date(msg.created_at);
     if (d >= timingStart && d <= timingEnd) {
-      if (msg.direction === 'inbound' && msg.lead_id) leadsGenerated.add(msg.lead_id);
+      const dir = (msg.direction || '').toLowerCase();
+      const isInbound = dir.includes('inbound') || dir.includes('received');
+      const isOutbound = dir.includes('outbound') || dir.includes('sent');
+
+      if (isInbound && msg.lead_id) leadsGenerated.add(msg.lead_id);
       
-      const dow = d.getDay();
-      dayVolume[dow][msg.direction]++;
+      const dow = d.getUTCDay();
+      if (isInbound) dayVolume[dow].inbound++;
+      if (isOutbound) dayVolume[dow].outbound++;
     }
   });
 
@@ -281,7 +309,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   // Period comparison
   const now = new Date();
   const periodEnd   = filter?.currentEnd   ?? now;
-  const periodStart = filter?.currentStart ?? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const periodStart = filter?.currentStart ?? new Date(0);
   const periodMs    = periodEnd.getTime() - periodStart.getTime();
   const prevEnd     = new Date(periodStart.getTime());
   const prevStart   = new Date(periodStart.getTime() - periodMs);

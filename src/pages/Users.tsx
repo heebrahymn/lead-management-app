@@ -50,6 +50,7 @@ export default function Users() {
       body: { action: "list" },
     });
     if (error) toast.error(error.message);
+    else if (data?.error) toast.error(data.error);
     else setUsers(data?.users ?? []);
     setLoading(false);
   };
