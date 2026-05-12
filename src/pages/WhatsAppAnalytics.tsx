@@ -157,10 +157,10 @@ export default function WhatsAppAnalytics() {
       <div className="mb-8 premium-card p-6">
         <h2 className="mb-5 text-lg font-bold tracking-tight">Working Hours Response Analysis</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard title="Chats in Working Hours" value={stats.workingHours.chatsInWorkingHours} />
+          <StatCard title="In-hours Chats" value={stats.workingHours.chatsInWorkingHours} />
           <StatCard title="In-hours Median" value={`${stats.workingHours.inHoursMedian} m`} />
           <StatCard title="Out-of-hours Arrivals" value={stats.workingHours.outOfHoursArrivals} />
-          <StatCard title="Late reply (30 mins >) in hours" value={stats.workingHours.inHoursLateReply} />
+          <StatCard title="In-hours Late Reply (30mins>)" value={stats.workingHours.inHoursLateReply} />
         </div>
       </div>
 
@@ -192,7 +192,7 @@ export default function WhatsAppAnalytics() {
                         const isPositive = row.change.startsWith("+") && row.change !== "+0%";
                         const isNegative = row.change.startsWith("-") && row.change !== "- 0%";
                         const inverted = [
-                          "Late-response Rate (%)", 
+                          "Late-Response Rate (%)", 
                           "Overall Median (mins)", 
                           "In-hours Median (mins)"
                         ].includes(row.metric);
@@ -333,7 +333,7 @@ export default function WhatsAppAnalytics() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {stats.responseTimeBreakdown.map((row: any, i) => {
+              {stats.responseTimeBreakdown.map((row, i) => {
                 const diffRaw = row.count - row.prevCount;
                 const changeLabel = diffRaw > 0 ? `+${diffRaw}` : diffRaw === 0 ? '0' : `${diffRaw}`;
 

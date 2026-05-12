@@ -357,7 +357,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   const periodComparison = [
     { metric: "Total Chats", current: currentStats.totalChats, prev: previousStats.totalChats, change: calcChange(currentStats.totalChats, previousStats.totalChats) },
     { metric: "Total Messages", current: currentStats.totalMessages, prev: previousStats.totalMessages, change: calcChange(currentStats.totalMessages, previousStats.totalMessages) },
-    { metric: "Late-response Rate (%)", current: currentStats.lateResponseRate, prev: previousStats.lateResponseRate, change: calcChange(currentStats.lateResponseRate, previousStats.lateResponseRate) },
+    { metric: "Late-Response Rate (%)", current: currentStats.lateResponseRate, prev: previousStats.lateResponseRate, change: calcChange(currentStats.lateResponseRate, previousStats.lateResponseRate) },
     { metric: "Overall Median (mins)", current: currentStats.overallMedian, prev: previousStats.overallMedian, change: calcChange(currentStats.overallMedian, previousStats.overallMedian) },
     { metric: "In-hours Median (mins)", current: currentStats.inHoursMedian, prev: previousStats.inHoursMedian, change: calcChange(currentStats.inHoursMedian, previousStats.inHoursMedian) },
     { metric: "Total Weekend Chats", current: currentStats.weekendChats, prev: previousStats.weekendChats, change: calcChange(currentStats.weekendChats, previousStats.weekendChats) },
