@@ -11,7 +11,7 @@ export interface WhatsAppMessage {
   wa_id: string;
   message_text: string | null;
   message_type: string | null;
-  direction: 'inbound' | 'outbound';
+  direction: string;
   status: string | null;
   operator_name: string | null;
   created_at: string;
@@ -40,11 +40,7 @@ export async function fetchWhatsAppMessages(limit: number = 10000): Promise<What
 
       if (!data || data.length === 0) break;
       
-      // Cast the incoming database rows to a compatible type before adding to the array
-      interface DatabaseMessage extends Omit<WhatsAppMessage, 'direction'> {
-        direction: string;
-      }
-      allMessages = [...allMessages, ...(data as unknown as DatabaseMessage[])];
+      allMessages = [...allMessages, ...(data as unknown as WhatsAppMessage[])];
       lastCount = data.length;
       
       // If we got fewer than CHUNK_SIZE, we've reached the end
@@ -85,8 +81,8 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     messagesByContact[msg.wa_id].push(msg);
 
     const date = new Date(msg.created_at);
-    const day = date.getDay();
-    const hour = date.getHours();
+    const day = date.getUTCDay();
+    const hour = date.getUTCHours();
     
     const isWeekend = day === 0 || day === 6;
     if (isWeekend) {
@@ -94,7 +90,10 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
       weekendChats.add(msg.wa_id);
     }
 
-    if (msg.direction === 'inbound') {
+    const dir = (msg.direction || '').toLowerCase();
+    const isInbound = dir.includes('inbound') || dir.includes('received');
+
+    if (isInbound) {
       totalInbound++;
       const isWorkingHour = !isWeekend && hour >= WORKING_HOURS_START && hour < WORKING_HOURS_END;
       if (isWorkingHour) {
@@ -122,12 +121,16 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     let lastInbound: WhatsAppMessage | null = null;
     
     contactMessages.forEach(msg => {
-      if (msg.direction === 'inbound') {
+      const dir = (msg.direction || '').toLowerCase();
+      const isInbound = dir.includes('inbound') || dir.includes('received');
+      const isOutbound = dir.includes('outbound') || dir.includes('sent');
+
+      if (isInbound) {
         if (lastInbound) {
           totalNoReply++;
         }
         lastInbound = msg;
-      } else if (msg.direction === 'outbound') {
+      } else if (isOutbound) {
         const opName = msg.operator_name || 'System / Auto-reply';
         if (!agentStatsMap[opName]) {
           agentStatsMap[opName] = { 
@@ -146,18 +149,19 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
           const mins = Math.round(responseTimeMs / 60000);
           overallResponseTimes.push(mins);
           
-          // Attribute response time to agent
-          agentStatsMap[opName].responseTimes.push(mins);
-
-          // Categorize into buckets
-          if (mins <= 5) agentStatsMap[opName].buckets[0]++;
-          else if (mins <= 15) agentStatsMap[opName].buckets[1]++;
-          else if (mins <= 30) agentStatsMap[opName].buckets[2]++;
-          else if (mins <= 60) agentStatsMap[opName].buckets[3]++;
-          else agentStatsMap[opName].buckets[4]++;
-
           if (workingHourMsgIds.has(lastInbound.id)) {
             inHoursResponseTimes.push(mins);
+            
+            // Attribute response time to agent for working hours
+            agentStatsMap[opName].responseTimes.push(mins);
+
+            // Categorize into buckets ONLY for in-hours
+            if (mins <= 5) agentStatsMap[opName].buckets[0]++;
+            else if (mins <= 15) agentStatsMap[opName].buckets[1]++;
+            else if (mins <= 30) agentStatsMap[opName].buckets[2]++;
+            else if (mins <= 60) agentStatsMap[opName].buckets[3]++;
+            else agentStatsMap[opName].buckets[4]++;
+
             if (mins >= 30) {
               inHoursLateReply++;
             }
@@ -201,7 +205,7 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
   return {
     totalChats: uniqueChats.size,
     totalMessages,
-    noResponseRate: totalInbound > 0 ? Math.round((totalNoReply / totalInbound) * 100) : 0,
+    lateResponseRate: totalResponded > 0 ? Math.round(((buckets[3] + buckets[4]) / totalResponded) * 100) : 0,
     overallMedian: calcMedian(overallResponseTimes),
     inHoursMedian: calcMedian(inHoursResponseTimes),
     weekendChats: weekendChats.size,
@@ -353,7 +357,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
   const periodComparison = [
     { metric: "Total Chats", current: currentStats.totalChats, prev: previousStats.totalChats, change: calcChange(currentStats.totalChats, previousStats.totalChats) },
     { metric: "Total Messages", current: currentStats.totalMessages, prev: previousStats.totalMessages, change: calcChange(currentStats.totalMessages, previousStats.totalMessages) },
-    { metric: "No-response Rate (%)", current: currentStats.noResponseRate, prev: previousStats.noResponseRate, change: calcChange(currentStats.noResponseRate, previousStats.noResponseRate) },
+    { metric: "Late-response Rate (%)", current: currentStats.lateResponseRate, prev: previousStats.lateResponseRate, change: calcChange(currentStats.lateResponseRate, previousStats.lateResponseRate) },
     { metric: "Overall Median (mins)", current: currentStats.overallMedian, prev: previousStats.overallMedian, change: calcChange(currentStats.overallMedian, previousStats.overallMedian) },
     { metric: "In-hours Median (mins)", current: currentStats.inHoursMedian, prev: previousStats.inHoursMedian, change: calcChange(currentStats.inHoursMedian, previousStats.inHoursMedian) },
     { metric: "Total Weekend Chats", current: currentStats.weekendChats, prev: previousStats.weekendChats, change: calcChange(currentStats.weekendChats, previousStats.weekendChats) },

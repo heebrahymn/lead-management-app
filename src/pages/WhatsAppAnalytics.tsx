@@ -188,9 +188,19 @@ export default function WhatsAppAnalytics() {
                   <td className="px-4 py-3.5 text-right">
                     <span className={cn(
                       "text-sm font-medium",
-                      row.change.startsWith("+") && row.change !== "+0%" ? "text-green-600" :
-                        row.change.startsWith("-") && row.change !== "- 0%" ? "text-red-600" :
-                          "text-muted-foreground"
+                      (() => {
+                        const isPositive = row.change.startsWith("+") && row.change !== "+0%";
+                        const isNegative = row.change.startsWith("-") && row.change !== "- 0%";
+                        const inverted = [
+                          "Late-response Rate (%)", 
+                          "Overall Median (mins)", 
+                          "In-hours Median (mins)"
+                        ].includes(row.metric);
+
+                        if (isPositive) return inverted ? "text-red-600" : "text-green-600";
+                        if (isNegative) return inverted ? "text-green-600" : "text-red-600";
+                        return "text-muted-foreground";
+                      })()
                     )}>
                       {row.change}
                     </span>
@@ -332,7 +342,15 @@ export default function WhatsAppAnalytics() {
                     <td className="px-4 py-3.5 text-right font-semibold text-foreground">{row.count}</td>
                     <td className="px-4 py-3.5 text-right font-medium text-foreground">{row.pct}%</td>
                     <td className="px-4 py-3.5 text-right">
-                      <span className={cn("text-sm font-medium", diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-muted-foreground")}>{changeLabel}</span>
+                      <span className={cn(
+                        "text-sm font-medium",
+                        (() => {
+                          const inverted = i >= 3; // 30-60m and >60m buckets are bad when increasing
+                          if (diff > 0) return inverted ? "text-red-600" : "text-green-600";
+                          if (diff < 0) return inverted ? "text-green-600" : "text-red-600";
+                          return "text-muted-foreground";
+                        })()
+                      )}>{changeLabel}</span>
                     </td>
                   </tr>
                 );
