@@ -30,12 +30,24 @@ export default function Overview() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return (data || []) as Lead[];
+      let allLeads: Lead[] = [];
+      const CHUNK_SIZE = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from("leads")
+          .select("*")
+          .order("updated_at", { ascending: false })
+          .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
+        
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allLeads = [...allLeads, ...data];
+        if (data.length < CHUNK_SIZE) break;
+      }
+      
+      return allLeads;
     },
   });
 
@@ -112,7 +124,7 @@ export default function Overview() {
       {/* KPI Cards */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Users} label="Total leads" value={leads.length} tint="primary" />
-        <KpiCard icon={TrendingUp} label="Conversion value" value={`£${pipelineValue.toLocaleString()}`} tint="amber" />
+        <KpiCard icon={TrendingUp} label="Conversion value" value={`$${pipelineValue.toLocaleString()}`} tint="amber" />
         <KpiCard icon={CheckCircle2} label="Converted" value={counts.converted} tint="green" />
         <KpiCard icon={TrendingUp} label="Conversion rate" value={`${conversionRate}%`} tint="primary" />
       </div>

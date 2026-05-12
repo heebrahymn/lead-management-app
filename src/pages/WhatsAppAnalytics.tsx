@@ -16,30 +16,23 @@ export default function WhatsAppAnalytics() {
     queryFn: () => fetchWhatsAppMessages(10000),
   });
 
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
-    queryKey: ["leads-for-wa-analytics"],
+  const { data: leadsCount = 0, isLoading: leadsLoading } = useQuery({
+    queryKey: ["leads-for-wa-analytics", globalFilter.filter],
     queryFn: async () => {
-      interface AnalyticsLead {
-        id: string;
-        source: string | null;
-        created_at: string;
+      let query = supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("source", "whatsapp");
+
+      if (globalFilter.filter) {
+        query = query
+          .gte("created_at", globalFilter.filter.currentStart.toISOString())
+          .lte("created_at", globalFilter.filter.currentEnd.toISOString());
       }
-      let allLeads: AnalyticsLead[] = [];
-      const CHUNK_SIZE = 1000;
-      
-      while (true) {
-        const { data, error } = await supabase
-          .from("leads")
-          .select("id, source, created_at")
-          .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
-        
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        
-        allLeads = [...allLeads, ...data];
-        if (data.length < CHUNK_SIZE) break;
-      }
-      return allLeads;
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
     },
   });
 
@@ -53,19 +46,7 @@ export default function WhatsAppAnalytics() {
   const stats = calculateWhatsAppAnalytics(messages, globalFilter.filter);
 
   // Synchronize leads count with main analytics definition
-  const sourcedLeadsCount = leads.filter(l => {
-    const source = l.source as string | null;
-    const isWaSource = source?.toLowerCase().includes("whatsapp") || source === "WA";
-    if (!isWaSource) return false;
-    
-    // If 'All time' or no filter yet, just return true based on source
-    if (!globalFilter.filter) return true;
-
-    const createdAt = new Date(l.created_at);
-    const start = globalFilter.filter.currentStart;
-    const end = globalFilter.filter.currentEnd;
-    return createdAt >= start && createdAt <= end;
-  }).length;
+  const sourcedLeadsCount = leadsCount;
 
   const periodLabel = globalFilter.preset === 'custom'
     ? (globalFilter.customStart && globalFilter.customEnd ? `${globalFilter.customStart} → ${globalFilter.customEnd}` : 'Custom range')
@@ -179,7 +160,7 @@ export default function WhatsAppAnalytics() {
           <StatCard title="Chats in Working Hours" value={stats.workingHours.chatsInWorkingHours} />
           <StatCard title="In-hours Median" value={`${stats.workingHours.inHoursMedian} m`} />
           <StatCard title="Out-of-hours Arrivals" value={stats.workingHours.outOfHoursArrivals} />
-          <StatCard title="In-hours, No Reply" value={stats.workingHours.inHoursNoReply} />
+          <StatCard title="Late reply (30 mins >) in hours" value={stats.workingHours.inHoursLateReply} />
         </div>
       </div>
 

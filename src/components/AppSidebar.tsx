@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Settings, LogOut, BarChart3, ShieldCheck, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Users, Settings, LogOut, BarChart3, ShieldCheck, MessageCircle, Activity } from "lucide-react";
 import { useRoles } from "@/hooks/useRole";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -30,6 +30,7 @@ const baseItems: NavItem[] = [
   { title: "Leads Management", url: "/leads", icon: Users },
   { title: "Lead Analytics", url: "/analytics", icon: BarChart3 },
   { title: "WhatsApp Analytics", url: "/whatsapp-analytics", icon: MessageCircle },
+  { title: "Audit Trail", url: "/activity-logs", icon: Activity },
 ];
 
 const settingsItem: NavItem = { title: "Settings", url: "/settings", icon: Settings };

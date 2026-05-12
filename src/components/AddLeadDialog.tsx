@@ -288,7 +288,7 @@ export function LeadFormDialog({ lead, onSuccess, trigger }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="deal_value" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conversion Value (£)</Label>
+              <Label htmlFor="deal_value" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conversion Value ($)</Label>
               <Input
                 id="deal_value"
                 type="number"

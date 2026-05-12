@@ -14,6 +14,7 @@ import Settings from "./pages/Settings.tsx";
 import Auth from "./pages/Auth.tsx";
 import Users from "./pages/Users.tsx";
 import LeadDetail from "./pages/LeadDetail.tsx";
+import AuditLogs from "./pages/AuditLogs.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/whatsapp-analytics" element={<WhatsAppAnalytics />} />
               <Route path="/users" element={<Users />} />
+              <Route path="/activity-logs" element={<AuditLogs />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -271,7 +271,7 @@ export default function LeadDetail() {
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Lead Information</h3>
               <dl className="space-y-4 text-sm">
                 <FieldRow label="Value">
-                  <span className="text-xl font-bold text-foreground">£{Number(lead.deal_value || 0).toLocaleString()}</span>
+                  <span className="text-xl font-bold text-foreground">${Number(lead.deal_value || 0).toLocaleString()}</span>
                 </FieldRow>
                 <FieldRow icon={<Mail className="h-3.5 w-3.5" />} label="Email">
                   <span className="font-medium">{lead.email || "—"}</span>

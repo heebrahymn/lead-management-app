@@ -383,6 +383,8 @@ export default function Index() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="7">Last 7 Days</SelectItem>
+                  <SelectItem value="30">Last 30 Days</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
@@ -421,10 +423,11 @@ export default function Index() {
               <div className="hidden grid-cols-12 gap-6 border-b border-border bg-gradient-to-r from-muted/50 to-muted/20 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/90 sm:grid">
                 <div className="col-span-3">Contact</div>
                 <div className="col-span-2">Phone</div>
-                <div className="col-span-2">Status</div>
+                <div className="col-span-1">Status</div>
                 <div className="col-span-1">Source</div>
                 <div className="col-span-2">Assigned To</div>
-                <div className="col-span-2 text-right">Actions</div>
+                <div className="col-span-2">Conversion Value</div>
+                <div className="col-span-1 text-right">Actions</div>
               </div>
               <ul className="divide-y divide-border">
                 {filtered.map((lead) => (
@@ -439,7 +442,7 @@ export default function Index() {
                     <div className="col-span-2 text-sm text-muted-foreground truncate">
                       {lead.phone || "—"}
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <StatusBadge status={lead.status} />
                     </div>
                     <div className="col-span-1">
@@ -449,12 +452,15 @@ export default function Index() {
                         </Badge>
                       )}
                     </div>
-                    <div className="col-span-2 text-sm text-muted-foreground">
+                    <div className="col-span-2 text-sm text-muted-foreground truncate">
                       {lead.assigned_to ? (
                         userMap.get(lead.assigned_to)?.full_name || userMap.get(lead.assigned_to)?.email?.split("@")[0] || "Unknown"
                       ) : "—"}
                     </div>
-                    <div className="col-span-2 flex items-center justify-end gap-3 text-muted-foreground">
+                    <div className="col-span-2 text-sm font-medium text-foreground">
+                      {lead.deal_value ? `$${Number(lead.deal_value).toLocaleString()}` : "—"}
+                    </div>
+                    <div className="col-span-1 flex items-center justify-end gap-3 text-muted-foreground">
                       <button 
                         className="hover:text-foreground transition-colors"
                         onClick={(e) => { e.stopPropagation(); navigate(`/leads/${lead.id}`); }}

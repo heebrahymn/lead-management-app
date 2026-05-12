@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Lead, LeadStatus, STATUSES, STATUS_DOT } from "@/lib/leads";
-import { Loader2 } from "lucide-react";
+import { Lead, LeadStatus, STATUSES, STATUS_DOT, ManagedUser } from "@/lib/leads";
+import { Loader2, Activity, Calendar, User, MessageSquare, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import {
   ResponsiveContainer,
   BarChart,
@@ -24,9 +28,29 @@ export default function Analytics() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("leads").select("*");
-      setLeads((data ?? []) as Lead[]);
-      setLoading(false);
+      try {
+        let allLeads: Lead[] = [];
+        const CHUNK_SIZE = 1000;
+        
+        while (true) {
+          const { data, error } = await supabase
+            .from("leads")
+            .select("*")
+            .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
+            
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          
+          allLeads = [...allLeads, ...(data as Lead[])];
+          if (data.length < CHUNK_SIZE) break;
+        }
+        
+        setLeads(allLeads);
+      } catch (err) {
+        console.error("Error fetching analytical data:", err);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -128,6 +152,26 @@ export default function Analytics() {
           )}
         </ChartCard>
       </div>
+
+      <div className="mt-6">
+        <div className="premium-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Recent System Activity
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Live log of changes made across the workspace</p>
+            </div>
+            <Link to="/activity-logs" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+              View All History
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          
+          <ActivityWidget />
+        </div>
+      </div>
     </div>
   );
 }
@@ -152,6 +196,96 @@ function ChartCard({
           {children}
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+function ActivityWidget() {
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { action: "list" } });
+      if (error) throw error;
+      return (data?.users || []) as ManagedUser[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["audit-logs-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 15000,
+  });
+
+  const userMap = useMemo(() => {
+    const map = new Map<string, ManagedUser>();
+    users.forEach(u => map.set(u.id, u));
+    return map;
+  }, [users]);
+
+  if (isLoading) {
+    return (
+      <div className="py-8 flex justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!logs || logs.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground py-8 text-center border border-dashed rounded-lg border-border">
+        No operational activities detected yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {logs.map((log: any) => {
+        const operator = log.user_id ? userMap.get(log.user_id) : null;
+        const isLeads = log.table_name === 'leads';
+        const data = log.new_data || log.old_data || {};
+        
+        return (
+          <div key={log.id} className="flex items-center gap-4 p-3 rounded-xl bg-muted/10 border border-border/40 text-sm">
+            <div className="p-2 bg-background rounded-full border border-border shadow-sm">
+              {isLeads ? <User className="h-3.5 w-3.5 text-blue-500" /> : <MessageSquare className="h-3.5 w-3.5 text-violet-500" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground truncate">
+                  {operator?.full_name || "System user"}
+                </span>
+                <span className="text-muted-foreground text-xs">•</span>
+                <span className="text-xs text-muted-foreground font-mono">
+                  {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                </span>
+              </div>
+              <div className="text-muted-foreground flex items-center gap-1.5 mt-0.5 truncate">
+                <Badge variant="outline" className={cn(
+                  "px-1 py-0 h-4 text-[9px] uppercase tracking-wider",
+                  log.action_type === 'INSERT' && "text-emerald-600 border-emerald-600/30 bg-emerald-600/5",
+                  log.action_type === 'UPDATE' && "text-amber-600 border-amber-600/30 bg-amber-600/5",
+                  log.action_type === 'DELETE' && "text-rose-600 border-rose-600/30 bg-rose-600/5"
+                )}>
+                  {log.action_type === 'INSERT' ? 'Created' : log.action_type === 'UPDATE' ? 'Modified' : 'Removed'}
+                </Badge>
+                <span>
+                  {isLeads ? `lead "${data.name || 'Unnamed'}"` : `a note context`}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

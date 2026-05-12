@@ -64,7 +64,7 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
   let totalOutbound = 0;
   let chatsInWorkingHours = 0;
   let outOfHoursArrivals = 0;
-  let inHoursNoReply = 0;
+  let inHoursLateReply = 0;
   let totalNoReply = 0;
   let weekendMessages = 0;
   
@@ -72,6 +72,7 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
   const overallResponseTimes: number[] = [];
   const messagesByContact: Record<string, WhatsAppMessage[]> = {};
   const uniqueChats = new Set<string>();
+  const weekendChats = new Set<string>(); // Track distinct weekend conversation streams
   // Track inbound message IDs that arrived during working hours
   const workingHourMsgIds = new Set<string>();
 
@@ -88,7 +89,10 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     const hour = date.getHours();
     
     const isWeekend = day === 0 || day === 6;
-    if (isWeekend) weekendMessages++;
+    if (isWeekend) {
+      weekendMessages++;
+      weekendChats.add(msg.wa_id);
+    }
 
     if (msg.direction === 'inbound') {
       totalInbound++;
@@ -121,7 +125,6 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
       if (msg.direction === 'inbound') {
         if (lastInbound) {
           totalNoReply++;
-          if (workingHourMsgIds.has(lastInbound.id)) inHoursNoReply++;
         }
         lastInbound = msg;
       } else if (msg.direction === 'outbound') {
@@ -155,6 +158,9 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
 
           if (workingHourMsgIds.has(lastInbound.id)) {
             inHoursResponseTimes.push(mins);
+            if (mins >= 30) {
+              inHoursLateReply++;
+            }
           }
           lastInbound = null;
         }
@@ -163,7 +169,6 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     
     if (lastInbound) {
       totalNoReply++;
-      if (workingHourMsgIds.has(lastInbound.id)) inHoursNoReply++;
     }
   });
 
@@ -199,10 +204,10 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
     noResponseRate: totalInbound > 0 ? Math.round((totalNoReply / totalInbound) * 100) : 0,
     overallMedian: calcMedian(overallResponseTimes),
     inHoursMedian: calcMedian(inHoursResponseTimes),
-    weekendShare: totalMessages > 0 ? Math.round((weekendMessages / totalMessages) * 100) : 0,
+    weekendChats: weekendChats.size,
     outOfHoursArrivals,
     chatsInWorkingHours,
-    inHoursNoReply,
+    inHoursLateReply,
     totalInbound,
     totalOutbound,
     responseTimeBuckets,
@@ -351,7 +356,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
     { metric: "No-response Rate (%)", current: currentStats.noResponseRate, prev: previousStats.noResponseRate, change: calcChange(currentStats.noResponseRate, previousStats.noResponseRate) },
     { metric: "Overall Median (mins)", current: currentStats.overallMedian, prev: previousStats.overallMedian, change: calcChange(currentStats.overallMedian, previousStats.overallMedian) },
     { metric: "In-hours Median (mins)", current: currentStats.inHoursMedian, prev: previousStats.inHoursMedian, change: calcChange(currentStats.inHoursMedian, previousStats.inHoursMedian) },
-    { metric: "Weekend Share (%)", current: currentStats.weekendShare, prev: previousStats.weekendShare, change: calcChange(currentStats.weekendShare, previousStats.weekendShare) },
+    { metric: "Total Weekend Chats", current: currentStats.weekendChats, prev: previousStats.weekendChats, change: calcChange(currentStats.weekendChats, previousStats.weekendChats) },
     { metric: "Out-of-hours Arrivals", current: currentStats.outOfHoursArrivals, prev: previousStats.outOfHoursArrivals, change: calcChange(currentStats.outOfHoursArrivals, previousStats.outOfHoursArrivals) },
   ];
 
@@ -366,7 +371,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
       chatsInWorkingHours: currentStats.chatsInWorkingHours,
       inHoursMedian: currentStats.inHoursMedian,
       outOfHoursArrivals: currentStats.outOfHoursArrivals,
-      inHoursNoReply: currentStats.inHoursNoReply
+      inHoursLateReply: currentStats.inHoursLateReply
     },
     periodComparison,
     periodDays,
