@@ -327,27 +327,29 @@ export default function WhatsAppAnalytics() {
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left font-medium text-foreground">Response Time</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground">Count</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground">% of Responded</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground">vs Previous Period</th>
+                <th className="px-4 py-3 text-right font-medium text-foreground">Current Count</th>
+                <th className="px-4 py-3 text-right font-medium text-foreground">Previous Count</th>
+                <th className="px-4 py-3 text-right font-medium text-foreground">Change %</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {stats.responseTimeBreakdown.map((row, i) => {
-                const diff = row.pct - row.prevPct;
-                const changeLabel = row.prevPct === 0 ? (row.pct > 0 ? `+${row.pct}%` : '— 0%') : (diff > 0 ? `+${diff}%` : diff === 0 ? '— 0%' : `${diff}%`);
+              {stats.responseTimeBreakdown.map((row: any, i) => {
+                const diffRaw = row.count - row.prevCount;
+                const pctChange = row.prevCount === 0 ? (row.count > 0 ? 100 : 0) : Math.round((diffRaw / row.prevCount) * 100);
+                const changeLabel = pctChange > 0 ? `+${pctChange}%` : pctChange === 0 ? '— 0%' : `${pctChange}%`;
+
                 return (
                   <tr key={i} className="hover:bg-muted/10">
                     <td className="px-4 py-3.5 font-medium text-muted-foreground">{row.label}</td>
                     <td className="px-4 py-3.5 text-right font-semibold text-foreground">{row.count}</td>
-                    <td className="px-4 py-3.5 text-right font-medium text-foreground">{row.pct}%</td>
+                    <td className="px-4 py-3.5 text-right font-medium text-muted-foreground">{row.prevCount}</td>
                     <td className="px-4 py-3.5 text-right">
                       <span className={cn(
                         "text-sm font-medium",
                         (() => {
-                          const inverted = i >= 3; // 30-60m and >60m buckets are bad when increasing
-                          if (diff > 0) return inverted ? "text-red-600" : "text-green-600";
-                          if (diff < 0) return inverted ? "text-green-600" : "text-red-600";
+                          const inverted = i >= 3; // Slow buckets are bad when volume climbs
+                          if (pctChange > 0) return inverted ? "text-red-600" : "text-green-600";
+                          if (pctChange < 0) return inverted ? "text-green-600" : "text-red-600";
                           return "text-muted-foreground";
                         })()
                       )}>{changeLabel}</span>

@@ -384,6 +384,7 @@ export function calculateWhatsAppAnalytics(messages: WhatsAppMessage[], filter?:
       label: bucket.label,
       count: bucket.count,
       pct: bucket.pct,
+      prevCount: previousStats.responseTimeBuckets[i]?.count ?? 0,
       prevPct: previousStats.responseTimeBuckets[i]?.pct ?? 0,
     }))
   };
