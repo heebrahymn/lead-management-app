@@ -329,14 +329,13 @@ export default function WhatsAppAnalytics() {
                 <th className="px-4 py-3 text-left font-medium text-foreground">Response Time</th>
                 <th className="px-4 py-3 text-right font-medium text-foreground">Current Count</th>
                 <th className="px-4 py-3 text-right font-medium text-foreground">Previous Count</th>
-                <th className="px-4 py-3 text-right font-medium text-foreground">Change %</th>
+                <th className="px-4 py-3 text-right font-medium text-foreground">Change</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {stats.responseTimeBreakdown.map((row: any, i) => {
                 const diffRaw = row.count - row.prevCount;
-                const pctChange = row.prevCount === 0 ? (row.count > 0 ? 100 : 0) : Math.round((diffRaw / row.prevCount) * 100);
-                const changeLabel = pctChange > 0 ? `+${pctChange}%` : pctChange === 0 ? '— 0%' : `${pctChange}%`;
+                const changeLabel = diffRaw > 0 ? `+${diffRaw}` : diffRaw === 0 ? '0' : `${diffRaw}`;
 
                 return (
                   <tr key={i} className="hover:bg-muted/10">
@@ -348,8 +347,8 @@ export default function WhatsAppAnalytics() {
                         "text-sm font-medium",
                         (() => {
                           const inverted = i >= 3; // Slow buckets are bad when volume climbs
-                          if (pctChange > 0) return inverted ? "text-red-600" : "text-green-600";
-                          if (pctChange < 0) return inverted ? "text-green-600" : "text-red-600";
+                          if (diffRaw > 0) return inverted ? "text-red-600" : "text-green-600";
+                          if (diffRaw < 0) return inverted ? "text-green-600" : "text-red-600";
                           return "text-muted-foreground";
                         })()
                       )}>{changeLabel}</span>
