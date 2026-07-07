@@ -18,40 +18,72 @@ export interface WhatsAppMessage {
   updated_at: string;
 }
 
-export async function fetchWhatsAppMessages(limit: number = 10000): Promise<WhatsAppMessage[]> {
-  console.log("Fetching messages from Supabase (paginated)...", { limit });
+export async function fetchWhatsAppMessages(
+  dateFilter?: { start?: Date; end?: Date },
+  limit: number = 200000
+): Promise<WhatsAppMessage[]> {
+  console.log("Fetching messages from Supabase (paginated)...", { dateFilter, limit });
   
-  let allMessages: WhatsAppMessage[] = [];
-  let lastCount = 0;
   const CHUNK_SIZE = 1000;
-
+  
   try {
-    while (allMessages.length < limit) {
-      const { data, error } = await supabase
+    // 1. Get total count first to allow parallel fetching
+    let countQuery = supabase
+      .from('whatsapp_messages')
+      .select('*', { count: 'exact', head: true });
+
+    if (dateFilter?.start) {
+      countQuery = countQuery.gte('created_at', dateFilter.start.toISOString());
+    }
+    if (dateFilter?.end) {
+      countQuery = countQuery.lte('created_at', dateFilter.end.toISOString());
+    }
+
+    const { count, error: countError } = await countQuery;
+    
+    if (countError) {
+      console.error("Supabase Count Error:", countError);
+      return [];
+    }
+
+    if (!count || count === 0) {
+      return [];
+    }
+
+    const fetchLimit = Math.min(count, limit);
+    const totalChunks = Math.ceil(fetchLimit / CHUNK_SIZE);
+    
+    console.log(`Fetching ${fetchLimit} messages in ${totalChunks} chunks in parallel...`);
+
+    // 2. Fetch all chunks in parallel
+    const promises = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const from = i * CHUNK_SIZE;
+      const to = Math.min(from + CHUNK_SIZE - 1, fetchLimit - 1);
+      
+      let query = supabase
         .from('whatsapp_messages')
         .select('*')
-        .order('created_at', { ascending: false })
-        .range(allMessages.length, allMessages.length + CHUNK_SIZE - 1);
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Supabase Error (whatsapp_messages):", error);
-        break;
+      if (dateFilter?.start) {
+        query = query.gte('created_at', dateFilter.start.toISOString());
+      }
+      if (dateFilter?.end) {
+        query = query.lte('created_at', dateFilter.end.toISOString());
       }
 
-      if (!data || data.length === 0) break;
-      
-      allMessages = [...allMessages, ...(data as unknown as WhatsAppMessage[])];
-      lastCount = data.length;
-      
-      // If we got fewer than CHUNK_SIZE, we've reached the end
-      if (lastCount < CHUNK_SIZE) break;
+      promises.push(query.range(from, to).then(res => res.data || []));
     }
+
+    const results = await Promise.all(promises);
+    const allMessages = results.flat() as unknown as WhatsAppMessage[];
     
-    console.log(`Successfully fetched ${allMessages.length} total messages.`);
-    return allMessages as unknown as WhatsAppMessage[];
+    console.log(`Successfully fetched ${allMessages.length} total messages in parallel.`);
+    return allMessages;
   } catch (err) {
     console.error("Unexpected error fetching messages:", err);
-    return allMessages as unknown as WhatsAppMessage[];
+    return [];
   }
 }
 

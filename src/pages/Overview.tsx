@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, LeadStatus, STATUSES, STATUS_DOT } from "@/lib/leads";
-import { Loader2, TrendingUp, Users, CheckCircle2, ArrowRight } from "lucide-react";
+import { Loader2, TrendingUp, Users, CheckCircle2, ArrowRight, Calendar, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, subDays, startOfDay } from "date-fns";
+import { useDateFilter, PresetKey } from "@/hooks/useDateFilter";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -22,23 +24,32 @@ import { StatusBadge } from "@/components/StatusBadge";
 
 export default function Overview() {
   const queryClient = useQueryClient();
+  const globalFilter = useDateFilter('30');
 
   useEffect(() => {
     document.title = "Overview — Carbon Car Care CRM";
   }, []);
 
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", "all"],
+  const { data: leads = [], isLoading, isRefetching, refetch } = useQuery({
+    queryKey: ["leads", globalFilter.filter],
     queryFn: async () => {
       let allLeads: Lead[] = [];
       const CHUNK_SIZE = 1000;
       
       while (true) {
-        const { data, error } = await supabase
+        let query = supabase
           .from("leads")
           .select("*")
-          .order("updated_at", { ascending: false })
-          .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
+          .order("updated_at", { ascending: false });
+          
+        if (globalFilter.filter?.currentStart) {
+          query = query.gte("created_at", globalFilter.filter.currentStart.toISOString());
+        }
+        if (globalFilter.filter?.currentEnd) {
+          query = query.lte("created_at", globalFilter.filter.currentEnd.toISOString());
+        }
+
+        const { data, error } = await query.range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
         
         if (error) throw error;
         if (!data || data.length === 0) break;
@@ -83,9 +94,19 @@ export default function Overview() {
     : "0";
 
   const trend = useMemo(() => {
-    const days = 14;
+    let days = 14; 
+    let endDate = new Date();
+    
+    if (globalFilter.preset !== 'custom') {
+        days = parseInt(globalFilter.preset, 10) || 30;
+    } else if (globalFilter.preset === 'custom' && globalFilter.filter) {
+        const diffTime = Math.abs(globalFilter.filter.currentEnd.getTime() - globalFilter.filter.currentStart.getTime());
+        days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+        endDate = globalFilter.filter.currentEnd;
+    }
+
     const buckets = Array.from({ length: days }, (_, i) => {
-      const d = startOfDay(subDays(new Date(), days - 1 - i));
+      const d = startOfDay(subDays(endDate, days - 1 - i));
       return { date: d, label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), count: 0 };
     });
     leads.forEach((l) => {
@@ -94,7 +115,7 @@ export default function Overview() {
       if (b) b.count++;
     });
     return buckets;
-  }, [leads]);
+  }, [leads, globalFilter]);
 
   const pieData = STATUSES.map((s) => ({
     name: s.label,
@@ -114,12 +135,72 @@ export default function Overview() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">Overview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A snapshot of your pipeline performance.
-        </p>
+      <div className="mb-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight brand-gradient-text inline-block">Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            A snapshot of your pipeline performance.
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-sm">
+            {(['7', '14', '28', '30'] as PresetKey[]).map(d => (
+              <Button
+                key={d}
+                variant={globalFilter.preset === d ? "default" : "ghost"}
+                size="sm"
+                className="h-8 text-xs px-3"
+                onClick={() => globalFilter.setPreset(d)}
+              >
+                Last {d} days
+              </Button>
+            ))}
+            <Button
+              variant={globalFilter.preset === 'custom' ? "default" : "ghost"}
+              size="sm"
+              className="h-8 text-xs px-3 gap-1.5"
+              onClick={() => globalFilter.setPreset('custom')}
+            >
+              <Calendar className="h-3.5 w-3.5" /> Custom
+            </Button>
+          </div>
+          
+          <Button
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2"
+          >
+            <RefreshCcw className={cn("h-3.5 w-3.5", isRefetching && "animate-spin")} />
+            {isRefetching ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
+
+      {globalFilter.preset === 'custom' && (
+        <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-sm">
+            <label className="font-semibold text-muted-foreground">From</label>
+            <input
+              type="date"
+              value={globalFilter.customStart}
+              onChange={e => globalFilter.setCustomStart(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <label className="font-semibold text-muted-foreground">To</label>
+            <input
+              type="date"
+              value={globalFilter.customEnd}
+              onChange={e => globalFilter.setCustomEnd(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -135,7 +216,11 @@ export default function Overview() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">New leads</h2>
-              <p className="text-xs text-muted-foreground">Last 14 days</p>
+              <p className="text-xs text-muted-foreground">
+                {globalFilter.preset === 'custom' 
+                    ? 'Custom range' 
+                    : `Last ${globalFilter.preset} days`}
+              </p>
             </div>
           </div>
           <div className="h-64">

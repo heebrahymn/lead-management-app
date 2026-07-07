@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, MessageCircle, Users, Clock, Send, Calendar, RefreshCcw } from "lucide-react";
 import { fetchWhatsAppMessages, calculateWhatsAppAnalytics } from "@/lib/wati";
@@ -12,8 +12,13 @@ export default function WhatsAppAnalytics() {
   const globalFilter = useDateFilter('7');
 
   const { data: messages = [], isLoading: messagesLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["whatsapp-messages"],
-    queryFn: () => fetchWhatsAppMessages(10000),
+    queryKey: ["whatsapp-messages", globalFilter.filter],
+    queryFn: () => fetchWhatsAppMessages({
+      start: globalFilter.filter?.previousStart,
+      end: globalFilter.filter?.currentEnd
+    }),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: leadsCount = 0, isLoading: leadsLoading } = useQuery({
@@ -43,7 +48,7 @@ export default function WhatsAppAnalytics() {
   const isLoading = messagesLoading || leadsLoading;
 
   // Calculate all stats based on the single global filter
-  const stats = calculateWhatsAppAnalytics(messages, globalFilter.filter);
+  const stats = useMemo(() => calculateWhatsAppAnalytics(messages, globalFilter.filter), [messages, globalFilter.filter]);
 
   // Synchronize leads count with main analytics definition
   const sourcedLeadsCount = leadsCount;
@@ -71,7 +76,7 @@ export default function WhatsAppAnalytics() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Global Date Filter UI */}
           <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-sm">
-            {(['7', '14'] as PresetKey[]).map(d => (
+            {(['7', '14', '28', '30'] as PresetKey[]).map(d => (
               <Button
                 key={d}
                 variant={globalFilter.preset === d ? "default" : "ghost"}
