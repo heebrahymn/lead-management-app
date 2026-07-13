@@ -1,15 +1,17 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, MessageCircle, Users, Clock, Send, Calendar, RefreshCcw } from "lucide-react";
+import { Loader2, MessageCircle, Users, Clock, Send, Calendar, RefreshCcw, Download } from "lucide-react";
 import { fetchWhatsAppMessages, calculateWhatsAppAnalytics } from "@/lib/wati";
 import { useDateFilter, PresetKey } from "@/hooks/useDateFilter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { generateWhatsAppReport } from "@/lib/generateWhatsAppReport";
 
 export default function WhatsAppAnalytics() {
   // Single Global Filter for all sections
   const globalFilter = useDateFilter('7');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: messages = [], isLoading: messagesLoading, isRefetching, refetch } = useQuery({
     queryKey: ["whatsapp-messages", globalFilter.filter],
@@ -56,6 +58,46 @@ export default function WhatsAppAnalytics() {
   const periodLabel = globalFilter.preset === 'custom'
     ? (globalFilter.customStart && globalFilter.customEnd ? `${globalFilter.customStart} → ${globalFilter.customEnd}` : 'Custom range')
     : `Current ${globalFilter.preset} days vs. previous ${globalFilter.preset} days`;
+
+  const handleDownloadReport = async () => {
+    setIsGenerating(true);
+    try {
+      // Small delay to let the UI update to "Generating..." state
+      await new Promise(r => setTimeout(r, 50));
+
+      // Fetch logo and convert to base64 data URL (cached by browser after first load)
+      let logoBase64: string | undefined;
+      try {
+        const response = await fetch("/logo.png");
+        const blob = await response.blob();
+        logoBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        // Continue without logo if fetch fails
+      }
+
+      await generateWhatsAppReport({
+        totalMessages: stats.totalMessages,
+        totalInbound: stats.totalInbound,
+        totalOutbound: stats.totalOutbound,
+        leadsSourced: sourcedLeadsCount,
+        workingHours: stats.workingHours,
+        periodComparison: stats.periodComparison,
+        agentPerformance: stats.agentPerformance,
+        chatVolumeByDay: stats.chatVolumeByDay,
+        responseTimeBreakdown: stats.responseTimeBreakdown,
+        periodDays: stats.periodDays,
+        periodLabel,
+        filterPreset: globalFilter.preset,
+        logoBase64,
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -106,6 +148,17 @@ export default function WhatsAppAnalytics() {
           >
             <RefreshCcw className={cn("h-3.5 w-3.5", isRefetching && "animate-spin")} />
             {isRefetching ? "Refreshing..." : "Refresh Data"}
+          </Button>
+
+          <Button
+            onClick={handleDownloadReport}
+            disabled={isGenerating || isLoading}
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2"
+          >
+            <Download className={cn("h-3.5 w-3.5", isGenerating && "animate-pulse")} />
+            {isGenerating ? "Generating..." : "Download Report"}
           </Button>
         </div>
       </div>
