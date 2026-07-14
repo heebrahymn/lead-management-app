@@ -10,6 +10,8 @@ import Index from "./pages/Index.tsx";
 import Overview from "./pages/Overview.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import WhatsAppAnalytics from "./pages/WhatsAppAnalytics.tsx";
+import GoogleAdsAnalytics from "./pages/GoogleAdsAnalytics.tsx";
+import MetaAdsAnalytics from "./pages/MetaAdsAnalytics.tsx";
 import Settings from "./pages/Settings.tsx";
 import Auth from "./pages/Auth.tsx";
 import Users from "./pages/Users.tsx";
@@ -40,6 +42,8 @@ const App = () => (
               <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/whatsapp-analytics" element={<WhatsAppAnalytics />} />
+              <Route path="/google-ads" element={<GoogleAdsAnalytics />} />
+              <Route path="/meta-ads" element={<MetaAdsAnalytics />} />
               <Route path="/users" element={<Users />} />
               <Route path="/activity-logs" element={<AuditLogs />} />
               <Route path="/settings" element={<Settings />} />

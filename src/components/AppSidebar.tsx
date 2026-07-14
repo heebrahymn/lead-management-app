@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Settings, LogOut, BarChart3, ShieldCheck, MessageCircle, Activity } from "lucide-react";
+import { LayoutDashboard, Users, Settings, LogOut, BarChart3, ShieldCheck, MessageCircle, Activity, Target, Megaphone } from "lucide-react";
 import { useRoles } from "@/hooks/useRole";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -30,6 +30,8 @@ const baseItems: NavItem[] = [
   { title: "Leads Management", url: "/leads", icon: Users },
   { title: "Lead Analytics", url: "/analytics", icon: BarChart3 },
   { title: "WhatsApp Analytics", url: "/whatsapp-analytics", icon: MessageCircle },
+  { title: "Google Ads Analytics", url: "/google-ads", icon: Target },
+  { title: "Meta Ads Analytics", url: "/meta-ads", icon: Megaphone },
   { title: "Audit Trail", url: "/activity-logs", icon: Activity },
 ];
 
