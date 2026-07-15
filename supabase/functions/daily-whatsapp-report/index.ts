@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
 
   // Check auth
   const authHeader = req.headers.get("Authorization");
-  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}`) {
+  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}` && authHeader !== `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -346,7 +346,8 @@ Deno.serve(async (req) => {
         "chirenj@mysyara.com", 
         "a.govindram@Carbon365.com", 
         "merusha.kisten@Carbon365.com", 
-        "Ayodele.Ibraheem@Carbon365.com"
+        "Ayodele.Ibraheem@Carbon365.com",
+        "funmi.ojo@Carbon365.com"
       ].join(", "),
       subject: `WhatsApp Analytics Report, ${targetDateStr}`,
       html: htmlContent,

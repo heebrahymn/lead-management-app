@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 serve(async (req) => {
   // Simple auth check to ensure only cron or authorized clients can trigger this
   const authHeader = req.headers.get('Authorization');
-  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}`) {
+  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}` && authHeader !== `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 

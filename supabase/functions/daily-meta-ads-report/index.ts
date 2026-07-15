@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 serve(async (req) => {
   // Auth check
   const authHeader = req.headers.get('Authorization');
-  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}`) {
+  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET')}` && authHeader !== `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 
