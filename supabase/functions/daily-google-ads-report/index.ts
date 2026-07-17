@@ -46,15 +46,7 @@ serve(async (req) => {
 
     if (metricsError) throw metricsError;
 
-    // Fetch Conversion Actions
-    const { data: actionsData, error: actionsError } = await supabase
-      .from('google_ads_conversion_actions')
-      .select('campaign_name, action_name, conversions')
-      .eq('date', targetDateYYYYMMDD);
-
-    if (actionsError) throw actionsError;
-
-    console.log(`Found ${metricsData?.length || 0} metric records and ${actionsData?.length || 0} conversion action records.`);
+    console.log(`Found ${metricsData?.length || 0} metric records.`);
 
     // Aggregations
     let totalSpend = 0;
@@ -86,16 +78,6 @@ serve(async (req) => {
       });
     }
 
-    const actionStats: Record<string, number> = {};
-    if (actionsData) {
-      actionsData.forEach(row => {
-        const conversions = Number(row.conversions) || 0;
-        if (!actionStats[row.action_name]) {
-          actionStats[row.action_name] = 0;
-        }
-        actionStats[row.action_name] += conversions;
-      });
-    }
 
     const overallCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
     const overallCPC = totalClicks > 0 ? totalSpend / totalClicks : 0;
@@ -108,10 +90,6 @@ serve(async (req) => {
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.spend - a.spend);
 
-    // Sort actions by conversions descending
-    const sortedActions = Object.entries(actionStats)
-      .map(([name, conversions]) => ({ name, conversions }))
-      .sort((a, b) => b.conversions - a.conversions);
 
     const htmlContent = `
     <!DOCTYPE html>
@@ -196,24 +174,6 @@ serve(async (req) => {
             </tbody>
           </table>
 
-          <h2>Conversion Actions</h2>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Action Name</th>
-                <th>Conversions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sortedActions.length === 0 ? `<tr><td colspan="2" style="text-align: center; padding: 20px;">No conversion actions recorded for this period.</td></tr>` : 
-                sortedActions.map(action => `
-                <tr>
-                  <td style="font-weight: 500; color: #0f172a;">${action.name}</td>
-                  <td>${action.conversions.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
         </div>
         
         <div class="footer">

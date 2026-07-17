@@ -425,7 +425,6 @@ export default function MetaAdsAnalytics() {
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     <th className="px-6 py-3 text-left font-medium text-foreground">Campaign Name</th>
-                    <th className="px-6 py-3 text-left font-medium text-foreground">Status</th>
                     <th className="px-6 py-3 text-right font-medium text-foreground">Spend</th>
                     <th className="px-6 py-3 text-right font-medium text-foreground">WA Clicks</th>
                     <th className="px-6 py-3 text-right font-medium text-foreground">Cost/WA Click</th>
@@ -452,14 +451,6 @@ export default function MetaAdsAnalytics() {
                           )} />
                           {campaign.name}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                          campaign.status === 'Active' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
-                        )}>
-                          {campaign.status}
-                        </span>
                       </td>
                       <td className="px-6 py-4 text-right text-muted-foreground">AED {campaign.spend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="px-6 py-4 text-right font-semibold text-foreground">{campaign.whatsapp_clicks.toLocaleString()}</td>
