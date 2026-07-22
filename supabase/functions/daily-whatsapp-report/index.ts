@@ -14,7 +14,7 @@ interface WhatsAppMessage {
 }
 
 // Stats calculation logic adapted from wati.ts
-function computePeriodStats(messages: WhatsAppMessage[]) {
+function computePeriodStats(messages: WhatsAppMessage[], reportingStartDate: Date, reportingEndDate: Date, nowTime: number) {
   let totalInbound = 0;
   let totalOutbound = 0;
   let chatsInWorkingHours = 0;
@@ -31,37 +31,41 @@ function computePeriodStats(messages: WhatsAppMessage[]) {
   const workingHourMsgIds = new Set<string>();
 
   messages.forEach(msg => {
-    uniqueChats.add(msg.wa_id);
+    const date = new Date(msg.created_at);
+    const inWindow = date >= reportingStartDate && date <= reportingEndDate;
 
     if (!messagesByContact[msg.wa_id]) {
       messagesByContact[msg.wa_id] = [];
     }
     messagesByContact[msg.wa_id].push(msg);
 
-    const date = new Date(msg.created_at);
-    const day = date.getUTCDay();
-    const hour = date.getUTCHours();
+    if (inWindow) {
+      uniqueChats.add(msg.wa_id);
 
-    const isWeekend = day === 0 || day === 6;
-    if (isWeekend) {
-      weekendMessages++;
-      weekendChats.add(msg.wa_id);
-    }
-
-    const dir = (msg.direction || '').toLowerCase();
-    const isInbound = dir.includes('inbound') || dir.includes('received');
-
-    if (isInbound) {
-      totalInbound++;
-      const isWorkingHour = !isWeekend && hour >= WORKING_HOURS_START && hour < WORKING_HOURS_END;
-      if (isWorkingHour) {
-        chatsInWorkingHours++;
-        workingHourMsgIds.add(msg.id);
-      } else {
-        outOfHoursArrivals++;
+      const day = date.getUTCDay();
+      const hour = date.getUTCHours();
+      const isWeekend = day === 0 || day === 6;
+      
+      if (isWeekend) {
+        weekendMessages++;
+        weekendChats.add(msg.wa_id);
       }
-    } else {
-      totalOutbound++;
+
+      const dir = (msg.direction || '').toLowerCase();
+      const isInbound = dir.includes('inbound') || dir.includes('received');
+
+      if (isInbound) {
+        totalInbound++;
+        const isWorkingHour = !isWeekend && hour >= WORKING_HOURS_START && hour < WORKING_HOURS_END;
+        if (isWorkingHour) {
+          chatsInWorkingHours++;
+          workingHourMsgIds.add(msg.id);
+        } else {
+          outOfHoursArrivals++;
+        }
+      } else {
+        totalOutbound++;
+      }
     }
   });
 
@@ -82,43 +86,45 @@ function computePeriodStats(messages: WhatsAppMessage[]) {
       const dir = (msg.direction || '').toLowerCase();
       const isInbound = dir.includes('inbound') || dir.includes('received');
       const isOutbound = dir.includes('outbound') || dir.includes('sent');
+      const msgTime = new Date(msg.created_at).getTime();
+      const inWindow = msgTime >= reportingStartDate.getTime() && msgTime <= reportingEndDate.getTime();
 
       if (isInbound) {
-        if (lastInbound) {
-          totalNoReply++;
-        }
         lastInbound = msg;
       } else if (isOutbound) {
         const opName = msg.operator_name || 'System / Auto-reply';
-        if (!agentStatsMap[opName]) {
-          agentStatsMap[opName] = {
-            name: opName,
-            msgsSent: 0,
-            responseTimes: [],
-            chats: new Set(),
-            buckets: [0, 0, 0, 0, 0]
-          };
+        
+        if (inWindow) {
+          if (!agentStatsMap[opName]) {
+            agentStatsMap[opName] = { name: opName, msgsSent: 0, responseTimes: [], chats: new Set(), buckets: [0, 0, 0, 0, 0] };
+          }
+          agentStatsMap[opName].msgsSent++;
+          agentStatsMap[opName].chats.add(msg.wa_id);
         }
-        agentStatsMap[opName].msgsSent++;
-        agentStatsMap[opName].chats.add(msg.wa_id);
 
         if (lastInbound) {
-          const responseTimeMs = new Date(msg.created_at).getTime() - new Date(lastInbound.created_at).getTime();
+          const responseTimeMs = msgTime - new Date(lastInbound.created_at).getTime();
           const mins = Math.round(responseTimeMs / 60000);
-          overallResponseTimes.push(mins);
+          
+          if (inWindow) {
+            overallResponseTimes.push(mins);
 
-          if (workingHourMsgIds.has(lastInbound.id)) {
-            inHoursResponseTimes.push(mins);
-            agentStatsMap[opName].responseTimes.push(mins);
+            if (workingHourMsgIds.has(lastInbound.id)) {
+              inHoursResponseTimes.push(mins);
+              if (!agentStatsMap[opName]) {
+                agentStatsMap[opName] = { name: opName, msgsSent: 0, responseTimes: [], chats: new Set(), buckets: [0, 0, 0, 0, 0] };
+              }
+              agentStatsMap[opName].responseTimes.push(mins);
 
-            if (mins <= 5) agentStatsMap[opName].buckets[0]++;
-            else if (mins <= 15) agentStatsMap[opName].buckets[1]++;
-            else if (mins <= 30) agentStatsMap[opName].buckets[2]++;
-            else if (mins <= 60) agentStatsMap[opName].buckets[3]++;
-            else agentStatsMap[opName].buckets[4]++;
+              if (mins <= 5) agentStatsMap[opName].buckets[0]++;
+              else if (mins <= 15) agentStatsMap[opName].buckets[1]++;
+              else if (mins <= 30) agentStatsMap[opName].buckets[2]++;
+              else if (mins <= 60) agentStatsMap[opName].buckets[3]++;
+              else agentStatsMap[opName].buckets[4]++;
 
-            if (mins >= 30) {
-              inHoursLateReply++;
+              if (mins >= 30) {
+                inHoursLateReply++;
+              }
             }
           }
           lastInbound = null;
@@ -127,7 +133,12 @@ function computePeriodStats(messages: WhatsAppMessage[]) {
     });
 
     if (lastInbound) {
-      totalNoReply++;
+      const timeSinceLastInbound = nowTime - new Date(lastInbound.created_at).getTime();
+      const hoursSinceLastInbound = timeSinceLastInbound / (1000 * 60 * 60);
+      
+      if (hoursSinceLastInbound >= 24) {
+        totalNoReply++;
+      }
     }
   });
 
@@ -304,22 +315,23 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Calculate dates for the last 24 hours
+    // Calculate dates for the reporting window (last 24 hours) and fetch window (last 48 hours for No Reply logic)
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
-    console.log(`Fetching messages between ${yesterday.toISOString()} and ${now.toISOString()}`);
+    console.log(`Fetching messages between ${twoDaysAgo.toISOString()} and ${now.toISOString()}`);
 
     const CHUNK_SIZE = 1000;
     let allMessages: WhatsAppMessage[] = [];
     let from = 0;
 
-    // Fetch all messages for the last 24 hours (paginated if needed)
+    // Fetch all messages for the last 48 hours (paginated if needed)
     while (true) {
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('id, wa_id, direction, operator_name, created_at')
-        .gte('created_at', yesterday.toISOString())
+        .gte('created_at', twoDaysAgo.toISOString())
         .lte('created_at', now.toISOString())
         .order('created_at', { ascending: false })
         .range(from, from + CHUNK_SIZE - 1);
@@ -332,9 +344,10 @@ Deno.serve(async (req) => {
       from += CHUNK_SIZE;
     }
 
-    console.log(`Found ${allMessages.length} messages.`);
+    console.log(`Found ${allMessages.length} messages in the 48h window.`);
 
-    const stats = computePeriodStats(allMessages);
+    // computePeriodStats takes the messages, the start/end of the reporting window (last 24h), and the current time
+    const stats = computePeriodStats(allMessages, yesterday, now, now.getTime());
     const targetDateStr = yesterday.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     const htmlContent = generateHtmlTemplate(stats, targetDateStr);
