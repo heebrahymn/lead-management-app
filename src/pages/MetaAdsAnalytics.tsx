@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
   Megaphone, Eye, MousePointerClick, TrendingDown, 
-  Percent, Activity, Coins, RefreshCcw, Calendar, Users, MessageCircle 
+  Percent, Activity, Coins, RefreshCcw, Calendar, Users, MessageCircle, Download 
 } from "lucide-react";
 import {
   AreaChart,
@@ -19,6 +19,7 @@ import {
   Legend
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { generateMetaAdsReport } from "@/lib/generateMetaAdsReport";
 
 // --- TYPES ---
 type MetaAdMetric = {
@@ -71,6 +72,7 @@ export default function MetaAdsAnalytics() {
   const globalFilter = useDateFilter('7');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
   const [rawData, setRawData] = useState<MetaAdMetric[]>([]);
 
@@ -196,6 +198,45 @@ export default function MetaAdsAnalytics() {
     cpm: activeCampaign.impressions > 0 ? ((activeCampaign.spend / activeCampaign.impressions) * 1000).toFixed(2) : "0.00",
   } : globalStats;
 
+  const handleDownloadReport = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      let periodLabel = `Last ${globalFilter.preset} days`;
+      if (globalFilter.preset === 'custom') {
+        periodLabel = `${globalFilter.customStart} to ${globalFilter.customEnd}`;
+      }
+
+      const ALLOWED = [
+        "zambia - buy 3 get 1 free apr-1-26 campaign",
+        "zambia - buy 2 get free gift 11jun26 campaign"
+      ];
+      const filteredCampaigns = campaignData.filter(c =>
+        ALLOWED.some(target => c.name.trim().toLowerCase() === target || c.name.trim().toLowerCase().includes(target))
+      );
+      const activeCampaigns = filteredCampaigns.length > 0 ? filteredCampaigns : campaignData;
+
+      const totalImpressions = activeCampaigns.reduce((sum, c) => sum + c.impressions, 0);
+      const totalReach = activeCampaigns.reduce((sum, c) => sum + c.reach, 0);
+      const totalClicks = activeCampaigns.reduce((sum, c) => sum + c.clicks, 0);
+      const totalWaClicks = activeCampaigns.reduce((sum, c) => sum + c.whatsapp_clicks, 0);
+      const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+      await generateMetaAdsReport({
+        periodLabel,
+        totalImpressions,
+        totalReach,
+        totalClicks,
+        totalWaClicks,
+        ctr,
+        campaigns: activeCampaigns,
+      });
+    } catch (err) {
+      console.error("Failed to generate Meta Ads report PDF:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
@@ -245,6 +286,17 @@ export default function MetaAdsAnalytics() {
           >
             <RefreshCcw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
             {isRefreshing ? "Refreshing..." : "Refresh Data"}
+          </Button>
+
+          <Button
+            onClick={handleDownloadReport}
+            variant="default"
+            size="sm"
+            className="h-9 gap-2"
+            disabled={isGeneratingPdf || isLoading || rawData.length === 0}
+          >
+            <Download className={cn("h-3.5 w-3.5", isGeneratingPdf && "animate-spin")} />
+            {isGeneratingPdf ? "Generating PDF..." : "Download PDF Report"}
           </Button>
         </div>
       </div>

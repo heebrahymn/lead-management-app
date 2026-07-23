@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
   Target, Eye, MousePointerClick, TrendingUp, 
-  TrendingDown, Percent, Activity, Coins, RefreshCcw, Calendar 
+  TrendingDown, Percent, Activity, Coins, RefreshCcw, Calendar, Download 
 } from "lucide-react";
 import {
   AreaChart,
@@ -19,6 +19,7 @@ import {
   Legend
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { generateGoogleAdsReport } from "@/lib/generateGoogleAdsReport";
 
 // --- TYPES ---
 type CampaignMetric = {
@@ -68,6 +69,7 @@ export default function GoogleAdsAnalytics() {
   const globalFilter = useDateFilter('7');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
   const [rawData, setRawData] = useState<CampaignMetric[]>([]);
 
@@ -192,6 +194,30 @@ export default function GoogleAdsAnalytics() {
     cvr: activeCampaign.clicks > 0 ? ((activeCampaign.conversions / activeCampaign.clicks) * 100).toFixed(2) : "0.00"
   } : globalStats;
 
+  const handleDownloadReport = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      let periodLabel = `Last ${globalFilter.preset} days`;
+      if (globalFilter.preset === 'custom') {
+        periodLabel = `${globalFilter.customStart} to ${globalFilter.customEnd}`;
+      }
+
+      await generateGoogleAdsReport({
+        periodLabel,
+        totalImpressions: Number(displayStats.impressions),
+        totalClicks: Number(displayStats.clicks),
+        totalConversions: Number(displayStats.conversions),
+        ctr: Number(displayStats.ctr),
+        cpc: Number(displayStats.cpc),
+        campaigns: campaignData,
+      });
+    } catch (err) {
+      console.error("Failed to generate Google Ads report PDF:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
@@ -241,6 +267,17 @@ export default function GoogleAdsAnalytics() {
           >
             <RefreshCcw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
             {isRefreshing ? "Refreshing..." : "Refresh Data"}
+          </Button>
+
+          <Button
+            onClick={handleDownloadReport}
+            variant="default"
+            size="sm"
+            className="h-9 gap-2"
+            disabled={isGeneratingPdf || isLoading || rawData.length === 0}
+          >
+            <Download className={cn("h-3.5 w-3.5", isGeneratingPdf && "animate-spin")} />
+            {isGeneratingPdf ? "Generating PDF..." : "Download PDF Report"}
           </Button>
         </div>
       </div>
