@@ -2,7 +2,7 @@
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
--- 1. Daily Meta Ads Report (HTML + PDF Attachment) - Scheduled at 8:00 AM UTC (9:00 AM WAT)
+-- 1. Original Daily Meta Ads HTML Report - Scheduled at 8:00 AM UTC (9:00 AM WAT)
 select cron.schedule(
   'daily-meta-ads-report', 
   '0 8 * * *',            
@@ -15,7 +15,7 @@ select cron.schedule(
   $$
 );
 
--- 2. Daily Google Ads Report (HTML + PDF Attachment) - Scheduled at 8:15 AM UTC (9:15 AM WAT)
+-- 2. Original Daily Google Ads HTML Report - Scheduled at 8:15 AM UTC (9:15 AM WAT)
 select cron.schedule(
   'daily-google-ads-report', 
   '15 8 * * *',            
@@ -28,13 +28,39 @@ select cron.schedule(
   $$
 );
 
--- 3. Daily WhatsApp Report - Scheduled at 8:30 AM UTC (9:30 AM WAT)
+-- 3. Original Daily WhatsApp HTML Report - Scheduled at 8:30 AM UTC (9:30 AM WAT)
 select cron.schedule(
   'daily-whatsapp-report', 
   '30 8 * * *',            
   $$
     select net.http_post(
         url := 'https://gejmzlzuddwdipcromni.supabase.co/functions/v1/daily-whatsapp-report',
+        headers := '{"Content-Type": "application/json", "Authorization": "Bearer sb_publishable_2CjqTI8B_cnB5mzNLXo4AQ_i1Jaj1o_"}'::jsonb,
+        body := '{}'::jsonb
+    );
+  $$
+);
+
+-- 4. NEW Daily Meta Ads PDF Report - Scheduled at 8:00 AM UTC (9:00 AM WAT)
+select cron.schedule(
+  'daily-meta-ads-pdf-report', 
+  '0 8 * * *',            
+  $$
+    select net.http_post(
+        url := 'https://gejmzlzuddwdipcromni.supabase.co/functions/v1/daily-meta-ads-pdf-report',
+        headers := '{"Content-Type": "application/json", "Authorization": "Bearer sb_publishable_2CjqTI8B_cnB5mzNLXo4AQ_i1Jaj1o_"}'::jsonb,
+        body := '{}'::jsonb
+    );
+  $$
+);
+
+-- 5. NEW Daily Google Ads PDF Report - Scheduled at 8:15 AM UTC (9:15 AM WAT)
+select cron.schedule(
+  'daily-google-ads-pdf-report', 
+  '15 8 * * *',            
+  $$
+    select net.http_post(
+        url := 'https://gejmzlzuddwdipcromni.supabase.co/functions/v1/daily-google-ads-pdf-report',
         headers := '{"Content-Type": "application/json", "Authorization": "Bearer sb_publishable_2CjqTI8B_cnB5mzNLXo4AQ_i1Jaj1o_"}'::jsonb,
         body := '{}'::jsonb
     );

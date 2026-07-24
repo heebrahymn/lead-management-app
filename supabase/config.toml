@@ -30,3 +30,14 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/daily-meta-ads-report/index.ts"
 
+[functions.daily-meta-ads-pdf-report]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/daily-meta-ads-pdf-report/index.ts"
+
+[functions.daily-google-ads-pdf-report]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/daily-google-ads-pdf-report/index.ts"
+
+
