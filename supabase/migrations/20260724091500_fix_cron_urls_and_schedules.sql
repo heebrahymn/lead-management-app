@@ -41,10 +41,10 @@ select cron.schedule(
   $$
 );
 
--- 4. NEW Daily Meta Ads PDF Report - Scheduled at 8:00 AM UTC (9:00 AM WAT)
+-- 4. NEW Daily Meta Ads PDF Report - Scheduled at 8:30 AM UTC (9:30 AM WAT)
 select cron.schedule(
   'daily-meta-ads-pdf-report', 
-  '0 8 * * *',            
+  '30 8 * * *',            
   $$
     select net.http_post(
         url := 'https://gejmzlzuddwdipcromni.supabase.co/functions/v1/daily-meta-ads-pdf-report',
@@ -54,10 +54,10 @@ select cron.schedule(
   $$
 );
 
--- 5. NEW Daily Google Ads PDF Report - Scheduled at 8:15 AM UTC (9:15 AM WAT)
+-- 5. NEW Daily Google Ads PDF Report - Scheduled at 8:31 AM UTC (9:31 AM WAT)
 select cron.schedule(
   'daily-google-ads-pdf-report', 
-  '15 8 * * *',            
+  '31 8 * * *',            
   $$
     select net.http_post(
         url := 'https://gejmzlzuddwdipcromni.supabase.co/functions/v1/daily-google-ads-pdf-report',
