@@ -284,8 +284,12 @@ serve(async (req) => {
     // Generate PDF Buffer
     const pdfBuffer = generatePdfReport(targetDateStr, campaigns);
 
-    // PDF specific recipient list (testing recipient ayodeleheebrahymn@outlook.com)
-    const pdfRecipients = "ayodeleheebrahymn@outlook.com";
+    // PDF specific recipient list
+    const pdfRecipients = [
+      "tabish.khan@yokohama-india.com",
+      "chirenj@mysyara.com",
+      "ayodele.ibraheem@carbon365.com"
+    ].join(", ");
 
     console.log(`Sending Google Ads PDF report email to ${pdfRecipients}...`);
     const info = await transporter.sendMail({
