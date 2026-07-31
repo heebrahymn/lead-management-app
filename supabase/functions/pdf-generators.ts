@@ -46,14 +46,8 @@ function addStandardHeader(doc: jsPDF, title: string, targetDateStr: string, pag
   doc.setTextColor(...COLORS.text);
   doc.text(title, margin, 33);
 
-  // 5. Red Subtitle
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(211, 47, 47);
-  doc.text("Yokohama Club Network \u2022 Carbon Car Care", margin, 39);
-
-  // 6. Metadata Row
-  const metaTopY = 44;
+  // 5. Metadata Row
+  const metaTopY = 38;
   doc.setDrawColor(...COLORS.divider);
   doc.setLineWidth(0.3);
   doc.line(margin, metaTopY, pageW - margin, metaTopY);
@@ -68,15 +62,15 @@ function addStandardHeader(doc: jsPDF, title: string, targetDateStr: string, pag
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...COLORS.muted);
-    doc.text(col.label, col.x, metaTopY + 5);
+    doc.text(col.label, col.x, metaTopY + 4.5);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9.5);
     doc.setTextColor(...COLORS.text);
-    doc.text(col.value, col.x, metaTopY + 10.5);
+    doc.text(col.value, col.x, metaTopY + 9.5);
   });
 
-  const metaBottomY = 57;
+  const metaBottomY = 51;
   doc.line(margin, metaBottomY, pageW - margin, metaBottomY);
 }
 
@@ -118,7 +112,7 @@ export function generateMetaPdfReport(targetDateStr: string, campaigns: any[]): 
   const margin = 16;
   const contentW = pageW - margin * 2;
 
-  addStandardHeader(doc, "Yokohama \u00D7 Carbon \u2014 Meta Ads Performance Report", targetDateStr, pageW, margin);
+  addStandardHeader(doc, "Meta Ads Performance Report", targetDateStr, pageW, margin);
 
   const totalImpressions = campaigns.reduce((sum, c) => sum + (Number(c.impressions) || 0), 0);
   const totalReach = campaigns.reduce((sum, c) => sum + (Number(c.reach) || 0), 0);
@@ -128,7 +122,7 @@ export function generateMetaPdfReport(targetDateStr: string, campaigns: any[]): 
   const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
   const costPerWaClick = totalWaClicks > 0 ? totalSpend / totalWaClicks : 0;
 
-  let y = 66;
+  let y = 58;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   let summaryText = `During the reporting period (${targetDateStr}), Meta Ads campaigns generated a total of ${totalWaClicks.toLocaleString()} WhatsApp clicks from ${totalImpressions.toLocaleString()} impressions, reaching ${totalReach.toLocaleString()} unique users across Facebook and Instagram. Total ad spend was AED ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, resulting in a Cost Per WhatsApp Click of AED ${costPerWaClick.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and an overall Click-Through Rate (CTR) of ${ctr.toFixed(2)}%.`;
@@ -228,7 +222,7 @@ export function generateGooglePdfReport(targetDateStr: string, campaigns: any[])
   const margin = 16;
   const contentW = pageW - margin * 2;
 
-  addStandardHeader(doc, "Yokohama \u00D7 Carbon \u2014 Google Ads Performance Report", targetDateStr, pageW, margin);
+  addStandardHeader(doc, "Google Ads Performance Report", targetDateStr, pageW, margin);
 
   const totalImpressions = campaigns.reduce((sum, c) => sum + (Number(c.impressions) || 0), 0);
   const totalClicks = campaigns.reduce((sum, c) => sum + (Number(c.clicks) || 0), 0);
@@ -238,7 +232,7 @@ export function generateGooglePdfReport(targetDateStr: string, campaigns: any[])
   const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0;
   const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
-  let y = 66;
+  let y = 58;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   let summaryText = `During the reporting period (${targetDateStr}), Google Ads campaigns generated a total of ${totalConversions.toLocaleString(undefined, { maximumFractionDigits: 1 })} conversions from ${totalClicks.toLocaleString()} clicks and ${totalImpressions.toLocaleString()} impressions. Total ad spend was AED ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, resulting in an average Cost Per Acquisition (CPA) of AED ${cpa.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and an average Click-Through Rate (CTR) of ${ctr.toFixed(2)}%.`;
@@ -338,9 +332,9 @@ export function generateWhatsAppPdfReport(targetDateStr: string, stats: any): Ui
   const margin = 16;
   const contentW = pageW - margin * 2;
 
-  addStandardHeader(doc, "Yokohama \u00D7 Carbon \u2014 WhatsApp Analytics Performance Report", targetDateStr, pageW, margin);
+  addStandardHeader(doc, "WhatsApp Analytics Performance Report", targetDateStr, pageW, margin);
 
-  let y = 66;
+  let y = 58;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   const summaryText = `Over the past 24 hours (${targetDateStr}), the team processed a total of ${stats.totalMessages.toLocaleString()} messages across ${stats.totalChats.toLocaleString()} unique conversations. We observed an inbound volume of ${stats.totalInbound.toLocaleString()} messages vs an outbound volume of ${stats.totalOutbound.toLocaleString()} messages. During working hours (7 AM - 5 PM), the team maintained a median response time of ${stats.inHoursMedian} minutes.`;

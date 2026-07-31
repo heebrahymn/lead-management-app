@@ -231,16 +231,10 @@ export async function generateGoogleAdsReport(data: GoogleAdsReportData): Promis
   doc.setFont(font, "bold");
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.text);
-  doc.text("Yokohama \u00D7 Carbon \u2014 Google Ads Performance Report", margin, 33);
+  doc.text("Google Ads Performance Report", margin, 33);
 
-  // 5. Red Subtitle below Title
-  doc.setFont(font, "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(211, 47, 47); // Red text
-  doc.text("Yokohama Club Network \u2022 Carbon Car Care", margin, 39);
-
-  // 6. Metadata Row with top & bottom divider lines
-  const metaTopY = 44;
+  // 5. Metadata Row with top & bottom divider lines
+  const metaTopY = 38;
   doc.setDrawColor(...COLORS.divider);
   doc.setLineWidth(0.3);
   doc.line(margin, metaTopY, pageW - margin, metaTopY);
@@ -256,19 +250,19 @@ export async function generateGoogleAdsReport(data: GoogleAdsReportData): Promis
     doc.setFont(font, "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...COLORS.muted);
-    doc.text(col.label, col.x, metaTopY + 5);
+    doc.text(col.label, col.x, metaTopY + 4.5);
 
     // Value (bold dark text)
     doc.setFont(font, "bold");
     doc.setFontSize(9.5);
     doc.setTextColor(...COLORS.text);
-    doc.text(col.value, col.x, metaTopY + 10.5);
+    doc.text(col.value, col.x, metaTopY + 9.5);
   });
 
-  const metaBottomY = 57;
+  const metaBottomY = 51;
   doc.line(margin, metaBottomY, pageW - margin, metaBottomY);
 
-  let y = 66;
+  let y = 58;
 
   // ════════════════════════════════════════════════════════════════
   // 1. Executive Summary Section
