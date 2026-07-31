@@ -186,18 +186,24 @@ serve(async (req) => {
   try {
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-    const targetDateYYYYMMDD = yesterday.toISOString().split('T')[0];
-    const targetDateStrFormatted = yesterday.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const targetDatePdfStr = yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const eightDaysAgo = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
 
-    console.log(`Generating combined PDF reports for date: ${targetDateYYYYMMDD}`);
+    const startDateYYYYMMDD = sevenDaysAgo.toISOString().split('T')[0];
+    const endDateYYYYMMDD = yesterday.toISOString().split('T')[0];
 
-    // 1. Fetch Meta Ads Metrics
+    const startDatePdfStr = sevenDaysAgo.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const endDatePdfStr = yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateRangePdfStr = `${startDatePdfStr} \u2013 ${endDatePdfStr}`;
+
+    console.log(`Generating weekly 3-in-1 PDF reports for date range: ${startDateYYYYMMDD} to ${endDateYYYYMMDD}`);
+
+    // 1. Fetch Weekly Meta Ads Metrics (7 days)
     const { data: metaData } = await supabase
       .from('meta_ads_metrics')
       .select('campaign_name, spend, impressions, reach, clicks, whatsapp_clicks')
-      .gte('date', targetDateYYYYMMDD);
+      .gte('date', startDateYYYYMMDD)
+      .lte('date', endDateYYYYMMDD);
 
     const metaMap = new Map<string, any>();
     if (metaData) {
@@ -214,11 +220,12 @@ serve(async (req) => {
     }
     const metaCampaigns = Array.from(metaMap.values()).sort((a, b) => b.spend - a.spend);
 
-    // 2. Fetch Google Ads Metrics
+    // 2. Fetch Weekly Google Ads Metrics (7 days)
     const { data: googleData } = await supabase
       .from('google_ads_metrics')
       .select('campaign_name, spend, impressions, clicks, conversions')
-      .eq('date', targetDateYYYYMMDD);
+      .gte('date', startDateYYYYMMDD)
+      .lte('date', endDateYYYYMMDD);
 
     const googleMap = new Map<string, any>();
     if (googleData) {
@@ -234,7 +241,7 @@ serve(async (req) => {
     }
     const googleCampaigns = Array.from(googleMap.values()).sort((a, b) => b.spend - a.spend);
 
-    // 3. Fetch WhatsApp Messages
+    // 3. Fetch Weekly WhatsApp Messages (7 days)
     const CHUNK_SIZE = 1000;
     let allWaMessages: WhatsAppMessage[] = [];
     let from = 0;
@@ -242,7 +249,7 @@ serve(async (req) => {
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('id, wa_id, direction, operator_name, created_at')
-        .gte('created_at', twoDaysAgo.toISOString())
+        .gte('created_at', eightDaysAgo.toISOString())
         .lte('created_at', now.toISOString())
         .order('created_at', { ascending: false })
         .range(from, from + CHUNK_SIZE - 1);
@@ -254,49 +261,55 @@ serve(async (req) => {
       from += CHUNK_SIZE;
     }
 
-    const waStats = computeWhatsAppStats(allWaMessages, yesterday, now, now.getTime());
+    const waStats = computeWhatsAppStats(allWaMessages, sevenDaysAgo, now, now.getTime());
 
     // 4. Generate all 3 PDF Buffers
-    const metaPdf = generateMetaPdfReport(targetDatePdfStr, metaCampaigns);
-    const googlePdf = generateGooglePdfReport(targetDatePdfStr, googleCampaigns);
-    const whatsappPdf = generateWhatsAppPdfReport(targetDatePdfStr, waStats);
+    const metaPdf = generateMetaPdfReport(dateRangePdfStr, metaCampaigns);
+    const googlePdf = generateGooglePdfReport(dateRangePdfStr, googleCampaigns);
+    const whatsappPdf = generateWhatsAppPdfReport(dateRangePdfStr, waStats);
 
-    // 5. Send single email containing all 3 PDF attachments (Strictly to testing email)
-    const testRecipient = "ayodeleheebrahymn@outlook.com";
+    // 5. Production Recipients for Weekly 3-in-1 PDF Report
+    const recipients = [
+      "chirenj@mysyara.com",
+      "a.govindram@Carbon365.com",
+      "merusha.kisten@Carbon365.com",
+      "Ayodele.Ibraheem@Carbon365.com",
+      "funmi.ojo@Carbon365.com"
+    ].join(", ");
 
-    console.log(`Sending combined 3-in-1 PDF report email to ${testRecipient}...`);
+    console.log(`Sending Weekly 3-in-1 PDF report email to: ${recipients}`);
     const info = await transporter.sendMail({
       from: `"Carbon365 Analytics" <${smtpUser}>`,
-      to: testRecipient,
-      subject: `Daily Performance PDF Reports — ${targetDateStrFormatted}`,
-      text: `Hello,\n\nPlease find attached the daily PDF performance reports for ${targetDateStrFormatted}:\n\n1. Meta Ads Performance Report\n2. Google Ads Performance Report\n3. WhatsApp Analytics Performance Report\n\nBest regards,\nCarbon Car Care Team`,
+      to: recipients,
+      subject: `Weekly Performance PDF Reports — ${dateRangePdfStr}`,
+      text: `Hello,\n\nPlease find attached the weekly PDF performance reports for ${dateRangePdfStr}:\n\n1. Meta Ads Performance Report\n2. Google Ads Performance Report\n3. WhatsApp Analytics Performance Report\n\nBest regards,\nCarbon Car Care Team`,
       attachments: [
         {
-          filename: `Meta_Ads_Report_${targetDateYYYYMMDD}.pdf`,
+          filename: `Meta_Ads_Weekly_Report_${startDateYYYYMMDD}_${endDateYYYYMMDD}.pdf`,
           content: metaPdf,
           contentType: "application/pdf",
         },
         {
-          filename: `Google_Ads_Report_${targetDateYYYYMMDD}.pdf`,
+          filename: `Google_Ads_Weekly_Report_${startDateYYYYMMDD}_${endDateYYYYMMDD}.pdf`,
           content: googlePdf,
           contentType: "application/pdf",
         },
         {
-          filename: `WhatsApp_Analytics_Report_${targetDateYYYYMMDD}.pdf`,
+          filename: `WhatsApp_Analytics_Weekly_Report_${startDateYYYYMMDD}_${endDateYYYYMMDD}.pdf`,
           content: whatsappPdf,
           contentType: "application/pdf",
         },
       ],
     });
 
-    console.log("Combined 3-in-1 PDF Email sent successfully: ", info.messageId);
+    console.log("Weekly 3-in-1 PDF Email sent successfully: ", info.messageId);
 
     return new Response(JSON.stringify({ success: true, messageId: info.messageId }), {
       headers: { "Content-Type": "application/json" },
     });
 
   } catch (error: any) {
-    console.error("Error generating combined PDF reports:", error);
+    console.error("Error generating weekly PDF reports:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
