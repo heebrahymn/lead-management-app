@@ -281,8 +281,8 @@ serve(async (req) => {
     const info = await transporter.sendMail({
       from: `"Carbon365 Analytics" <${smtpUser}>`,
       to: recipients,
-      subject: `Weekly Performance PDF Reports — ${dateRangePdfStr}`,
-      text: `Hello,\n\nPlease find attached the weekly PDF performance reports for ${dateRangePdfStr}:\n\n1. Meta Ads Performance Report\n2. Google Ads Performance Report\n3. WhatsApp Analytics Performance Report\n\nBest regards,\nCarbon Car Care Team`,
+      subject: `Weekly Performance Reports \u2014 ${dateRangePdfStr}`,
+      text: `Hello,\n\nPlease find attached the weekly performance reports for ${dateRangePdfStr}:\n\n1. Meta Ads Performance Report\n2. Google Ads Performance Report\n3. WhatsApp Analytics Performance Report\n\nBest regards,\nCarbon Car Care Team`,
       attachments: [
         {
           filename: `Meta_Ads_Weekly_Report_${startDateYYYYMMDD}_${endDateYYYYMMDD}.pdf`,
