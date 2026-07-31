@@ -23,19 +23,19 @@ function addStandardHeader(doc: jsPDF, title: string, targetDateStr: string, pag
     // Skip if invalid
   }
 
-  // 2. Yokohama Logo on Far-Right
-  const yokohamaH = 15.0;
-  const yokohamaY = 7.5;
-  try {
-    const yokohamaW = yokohamaH * 2.5637;
-    const yokohamaX = pageW - margin - yokohamaW;
-    doc.addImage(YOKOHAMA_LOGO_BASE64, "PNG", yokohamaX, yokohamaY, yokohamaW, yokohamaH);
-  } catch {
-    // Skip if invalid
-  }
+  // 2. Date on Far-Right (replacing Yokohama logo)
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.muted);
+  doc.text("DATE", pageW - margin, 12, { align: "right" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(...COLORS.text);
+  doc.text(targetDateStr, pageW - margin, 17.5, { align: "right" });
 
   // 3. Thick Red Accent Line
-  const redLineY = 25;
+  const redLineY = 24;
   doc.setDrawColor(211, 47, 47);
   doc.setLineWidth(1.0);
   doc.line(margin, redLineY, pageW - margin, redLineY);
@@ -44,34 +44,7 @@ function addStandardHeader(doc: jsPDF, title: string, targetDateStr: string, pag
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(...COLORS.text);
-  doc.text(title, margin, 33);
-
-  // 5. Metadata Row
-  const metaTopY = 38;
-  doc.setDrawColor(...COLORS.divider);
-  doc.setLineWidth(0.3);
-  doc.line(margin, metaTopY, pageW - margin, metaTopY);
-
-  const metaCols = [
-    { label: "PREPARED BY", value: "Carbon Car Care", x: margin },
-    { label: "FOR", value: "Yokohama Team", x: margin + 64 },
-    { label: "DATE", value: targetDateStr, x: margin + 128 },
-  ];
-
-  metaCols.forEach((col) => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...COLORS.muted);
-    doc.text(col.label, col.x, metaTopY + 4.5);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...COLORS.text);
-    doc.text(col.value, col.x, metaTopY + 9.5);
-  });
-
-  const metaBottomY = 51;
-  doc.line(margin, metaBottomY, pageW - margin, metaBottomY);
+  doc.text(title, margin, 32);
 }
 
 function addStandardFooter(doc: jsPDF, targetDateStr: string, pageW: number, pageH: number, margin: number) {
@@ -122,7 +95,7 @@ export function generateMetaPdfReport(targetDateStr: string, campaigns: any[]): 
   const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
   const costPerWaClick = totalWaClicks > 0 ? totalSpend / totalWaClicks : 0;
 
-  let y = 58;
+  let y = 42;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   let summaryText = `During the reporting period (${targetDateStr}), Meta Ads campaigns generated a total of ${totalWaClicks.toLocaleString()} WhatsApp clicks from ${totalImpressions.toLocaleString()} impressions, reaching ${totalReach.toLocaleString()} unique users across Facebook and Instagram. Total ad spend was AED ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, resulting in a Cost Per WhatsApp Click of AED ${costPerWaClick.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and an overall Click-Through Rate (CTR) of ${ctr.toFixed(2)}%.`;
@@ -232,7 +205,7 @@ export function generateGooglePdfReport(targetDateStr: string, campaigns: any[])
   const cpa = totalConversions > 0 ? totalSpend / totalConversions : 0;
   const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
-  let y = 58;
+  let y = 42;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   let summaryText = `During the reporting period (${targetDateStr}), Google Ads campaigns generated a total of ${totalConversions.toLocaleString(undefined, { maximumFractionDigits: 1 })} conversions from ${totalClicks.toLocaleString()} clicks and ${totalImpressions.toLocaleString()} impressions. Total ad spend was AED ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, resulting in an average Cost Per Acquisition (CPA) of AED ${cpa.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and an average Click-Through Rate (CTR) of ${ctr.toFixed(2)}%.`;
@@ -334,7 +307,7 @@ export function generateWhatsAppPdfReport(targetDateStr: string, stats: any): Ui
 
   addStandardHeader(doc, "WhatsApp Analytics Performance Report", targetDateStr, pageW, margin);
 
-  let y = 58;
+  let y = 42;
   y = renderSectionTitle(doc, "Executive Summary", y, margin);
 
   const summaryText = `Over the past 24 hours (${targetDateStr}), the team processed a total of ${stats.totalMessages.toLocaleString()} messages across ${stats.totalChats.toLocaleString()} unique conversations. We observed an inbound volume of ${stats.totalInbound.toLocaleString()} messages vs an outbound volume of ${stats.totalOutbound.toLocaleString()} messages. During working hours (7 AM - 5 PM), the team maintained a median response time of ${stats.inHoursMedian} minutes.`;

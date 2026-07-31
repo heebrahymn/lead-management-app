@@ -208,21 +208,19 @@ export async function generateGoogleAdsReport(data: GoogleAdsReportData): Promis
     }
   }
 
-  // 2. Yokohama Logo on Far-Right (Increased size for optical balance)
-  const yokohamaH = 15.0; // Increased height so text & red Y mark are prominent
-  const yokohamaY = 7.5;  // Vertically aligned with Carbon logo
-  if (yokohamaLogo) {
-    try {
-      const yokohamaW = yokohamaH * 2.5637; // ~38.5mm width
-      const yokohamaX = pageW - margin - yokohamaW;
-      doc.addImage(yokohamaLogo, "PNG", yokohamaX, yokohamaY, yokohamaW, yokohamaH);
-    } catch {
-      // Skip if invalid
-    }
-  }
+  // 2. Date on Far-Right (replacing Yokohama logo)
+  doc.setFont(font, "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.muted);
+  doc.text("DATE", pageW - margin, 12, { align: "right" });
+
+  doc.setFont(font, "bold");
+  doc.setFontSize(10.5);
+  doc.setTextColor(...COLORS.text);
+  doc.text(dateStr, pageW - margin, 17.5, { align: "right" });
 
   // 3. Thick Red Accent Line across page
-  const redLineY = 25;
+  const redLineY = 24;
   doc.setDrawColor(211, 47, 47); // Brand red matching Yokohama
   doc.setLineWidth(1.0);
   doc.line(margin, redLineY, pageW - margin, redLineY);
@@ -231,38 +229,9 @@ export async function generateGoogleAdsReport(data: GoogleAdsReportData): Promis
   doc.setFont(font, "bold");
   doc.setFontSize(15);
   doc.setTextColor(...COLORS.text);
-  doc.text("Google Ads Performance Report", margin, 33);
+  doc.text("Google Ads Performance Report", margin, 32);
 
-  // 5. Metadata Row with top & bottom divider lines
-  const metaTopY = 38;
-  doc.setDrawColor(...COLORS.divider);
-  doc.setLineWidth(0.3);
-  doc.line(margin, metaTopY, pageW - margin, metaTopY);
-
-  const metaCols = [
-    { label: "PREPARED BY", value: "Carbon Car Care", x: margin },
-    { label: "FOR", value: "Yokohama Team", x: margin + 64 },
-    { label: "DATE", value: dateStr, x: margin + 128 },
-  ];
-
-  metaCols.forEach((col) => {
-    // Label (uppercase muted small font)
-    doc.setFont(font, "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...COLORS.muted);
-    doc.text(col.label, col.x, metaTopY + 4.5);
-
-    // Value (bold dark text)
-    doc.setFont(font, "bold");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...COLORS.text);
-    doc.text(col.value, col.x, metaTopY + 9.5);
-  });
-
-  const metaBottomY = 51;
-  doc.line(margin, metaBottomY, pageW - margin, metaBottomY);
-
-  let y = 58;
+  let y = 42;
 
   // ════════════════════════════════════════════════════════════════
   // 1. Executive Summary Section
