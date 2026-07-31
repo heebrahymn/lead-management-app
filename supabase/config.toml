@@ -40,4 +40,15 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/daily-google-ads-pdf-report/index.ts"
 
+[functions.daily-whatsapp-pdf-report]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/daily-whatsapp-pdf-report/index.ts"
+
+[functions.daily-pdf-reports]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/daily-pdf-reports/index.ts"
+
+
 
