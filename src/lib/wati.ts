@@ -150,7 +150,7 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
   Object.values(messagesByContact).forEach(contactMessages => {
     contactMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
-    let lastInbound: WhatsAppMessage | null = null;
+    let firstInboundInSession: WhatsAppMessage | null = null;
     
     contactMessages.forEach(msg => {
       const dir = (msg.direction || '').toLowerCase();
@@ -158,10 +158,9 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
       const isOutbound = dir.includes('outbound') || dir.includes('sent');
 
       if (isInbound) {
-        if (lastInbound) {
-          totalNoReply++;
+        if (!firstInboundInSession) {
+          firstInboundInSession = msg;
         }
-        lastInbound = msg;
       } else if (isOutbound) {
         const opName = msg.operator_name || 'System / Auto-reply';
         if (!agentStatsMap[opName]) {
@@ -176,12 +175,18 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
         agentStatsMap[opName].msgsSent++;
         agentStatsMap[opName].chats.add(msg.wa_id);
 
-        if (lastInbound) {
-          const responseTimeMs = new Date(msg.created_at).getTime() - new Date(lastInbound.created_at).getTime();
+        if (firstInboundInSession) {
+          const responseTimeMs = new Date(msg.created_at).getTime() - new Date(firstInboundInSession.created_at).getTime();
+          
+          // Time-based missed chat logic
+          if (responseTimeMs > 24 * 60 * 60 * 1000) {
+            totalNoReply++;
+          }
+          
           const mins = Math.round(responseTimeMs / 60000);
           overallResponseTimes.push(mins);
           
-          if (workingHourMsgIds.has(lastInbound.id)) {
+          if (workingHourMsgIds.has(firstInboundInSession.id)) {
             inHoursResponseTimes.push(mins);
             
             // Attribute response time to agent for working hours
@@ -198,13 +203,16 @@ export function computePeriodStats(messages: WhatsAppMessage[]) {
               inHoursLateReply++;
             }
           }
-          lastInbound = null;
+          firstInboundInSession = null;
         }
       }
     });
     
-    if (lastInbound) {
-      totalNoReply++;
+    if (firstInboundInSession) {
+      const timeSinceMs = Date.now() - new Date(firstInboundInSession.created_at).getTime();
+      if (timeSinceMs > 24 * 60 * 60 * 1000) {
+        totalNoReply++;
+      }
     }
   });
 
