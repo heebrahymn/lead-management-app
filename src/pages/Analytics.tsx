@@ -32,18 +32,38 @@ export default function Analytics() {
         let allLeads: Lead[] = [];
         const CHUNK_SIZE = 1000;
         
-        while (true) {
-          const { data, error } = await supabase
-            .from("leads")
-            .select("*")
-            .range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
-            
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          
-          allLeads = [...allLeads, ...(data as Lead[])];
-          if (data.length < CHUNK_SIZE) break;
+        // 1. Get total count first
+        const { count, error: countError } = await supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true });
+
+        if (countError) throw countError;
+        
+        if (!count || count === 0) {
+          setLeads([]);
+          setLoading(false);
+          return;
         }
+
+        // 2. Fetch in parallel chunks
+        const totalChunks = Math.ceil(count / CHUNK_SIZE);
+        const promises = [];
+        
+        for (let i = 0; i < totalChunks; i++) {
+          const from = i * CHUNK_SIZE;
+          const to = from + CHUNK_SIZE - 1;
+          
+          promises.push(
+            supabase
+              .from("leads")
+              .select("status, source")
+              .range(from, to)
+              .then(res => res.data || [])
+          );
+        }
+        
+        const results = await Promise.all(promises);
+        allLeads = results.flat() as unknown as Lead[];
         
         setLeads(allLeads);
       } catch (err) {

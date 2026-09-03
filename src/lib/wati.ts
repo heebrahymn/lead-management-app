@@ -63,7 +63,7 @@ export async function fetchWhatsAppMessages(
       
       let query = supabase
         .from('whatsapp_messages')
-        .select('*')
+        .select('id, wa_id, lead_id, direction, operator_name, created_at')
         .order('created_at', { ascending: false });
 
       if (dateFilter?.start) {

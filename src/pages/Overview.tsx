@@ -36,10 +36,34 @@ export default function Overview() {
       let allLeads: Lead[] = [];
       const CHUNK_SIZE = 1000;
       
-      while (true) {
+      let countQuery = supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true });
+
+      if (globalFilter.filter?.currentStart) {
+        countQuery = countQuery.gte("created_at", globalFilter.filter.currentStart.toISOString());
+      }
+      if (globalFilter.filter?.currentEnd) {
+        countQuery = countQuery.lte("created_at", globalFilter.filter.currentEnd.toISOString());
+      }
+
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+      
+      if (!count || count === 0) {
+        return [];
+      }
+
+      const totalChunks = Math.ceil(count / CHUNK_SIZE);
+      const promises = [];
+
+      for (let i = 0; i < totalChunks; i++) {
+        const from = i * CHUNK_SIZE;
+        const to = from + CHUNK_SIZE - 1;
+        
         let query = supabase
           .from("leads")
-          .select("*")
+          .select("id, status, deal_value, created_at, updated_at, name, email, phone")
           .order("updated_at", { ascending: false });
           
         if (globalFilter.filter?.currentStart) {
@@ -48,15 +72,12 @@ export default function Overview() {
         if (globalFilter.filter?.currentEnd) {
           query = query.lte("created_at", globalFilter.filter.currentEnd.toISOString());
         }
-
-        const { data, error } = await query.range(allLeads.length, allLeads.length + CHUNK_SIZE - 1);
         
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        
-        allLeads = [...allLeads, ...data];
-        if (data.length < CHUNK_SIZE) break;
+        promises.push(query.range(from, to).then(res => res.data || []));
       }
+
+      const results = await Promise.all(promises);
+      allLeads = results.flat() as unknown as Lead[];
       
       return allLeads;
     },
